@@ -1,0 +1,966 @@
+{
+  "at": "2026-05-11T11:47:17.442Z",
+  "stats": {
+    "total": 239,
+    "passed": 239,
+    "failed": 0
+  },
+  "results": [
+    {
+      "name": "TOOLS 非空且每条有 name/description/parameters",
+      "ok": true
+    },
+    {
+      "name": "工具名全局唯一",
+      "ok": true
+    },
+    {
+      "name": "required 字段的参数必须在 properties 中声明",
+      "ok": true
+    },
+    {
+      "name": "关键工具在 TOOLS 中存在",
+      "ok": true
+    },
+    {
+      "name": "inferOwnerTool 所有返回值都在 WRITE_RULES 里",
+      "ok": true
+    },
+    {
+      "name": "非法越界路径会被 resolveInProject 拒绝",
+      "ok": true
+    },
+    {
+      "name": "短应答不装载 skill",
+      "ok": true
+    },
+    {
+      "name": "\"写第 3 章\" 触发 chinese-novelist/chapter-planner/wiki-query",
+      "ok": true
+    },
+    {
+      "name": "\"改写这段\" 挂 revision",
+      "ok": true
+    },
+    {
+      "name": "无 SOUL + \"我想写本书\" 触发 work-setup",
+      "ok": true
+    },
+    {
+      "name": "autoStage after:write_chapter 挂 wiki-ingest",
+      "ok": true
+    },
+    {
+      "name": "立项短应答\"继续\"挂 setup-pipeline + 当前阶段 skill",
+      "ok": true
+    },
+    {
+      "name": "设定未完成时写章会挂 setup-pipeline + 当前阶段 skill",
+      "ok": true
+    },
+    {
+      "name": "好样本比差样本得分高",
+      "ok": true
+    },
+    {
+      "name": "countWords 只计 CJK + 英文词",
+      "ok": true
+    },
+    {
+      "name": "AI 味样本触发 anti_ai 扣分",
+      "ok": true
+    },
+    {
+      "name": "analyzeTransitions: 硬切样本 bridgeRatio<0.5",
+      "ok": true
+    },
+    {
+      "name": "analyzeTransitions: 平滑样本 bridgeRatio>=0.7",
+      "ok": true
+    },
+    {
+      "name": "analyzeTransitions: 章首命中硬锚点 → inter.strong=true",
+      "ok": true
+    },
+    {
+      "name": "analyzeTransitions: 章首与上章末完全无锚 → inter.strong=false",
+      "ok": true
+    },
+    {
+      "name": "analyzeTransitions: 第一章无 prevEnding → inter.strong=true 自动通过",
+      "ok": true
+    },
+    {
+      "name": "scoreChapterContent: 加入 transition 维度",
+      "ok": true
+    },
+    {
+      "name": "scoreChapterContent: 平滑样本 transition 分高于硬切样本",
+      "ok": true
+    },
+    {
+      "name": "scoreChapterContent: 章际硬切 → issues 含\"章际硬切\"",
+      "ok": true
+    },
+    {
+      "name": "scoreChapterContent: 段际硬切多 → issues 含\"段际硬切\"",
+      "ok": true
+    },
+    {
+      "name": "BASE_SYSTEM 含 第 -1.5 条 场景过渡铁律",
+      "ok": true
+    },
+    {
+      "name": "critic.js 含章际衔接段 §6",
+      "ok": true
+    },
+    {
+      "name": "ChapterSavedCard.DIM_LABEL 与后端维度 keys 同步",
+      "ok": true
+    },
+    {
+      "name": "ChapterSavedCard verdict 用 pass（与后端一致），不再用 accept",
+      "ok": true
+    },
+    {
+      "name": "acceptance.js 把 prevEnding/anchors 传给 scoreChapterContent",
+      "ok": true
+    },
+    {
+      "name": "AcceptanceCard 读 relPath（与后端 emit 一致）",
+      "ok": true
+    },
+    {
+      "name": "chapter_critic 事件携带 issues 数组",
+      "ok": true
+    },
+    {
+      "name": "auto_repair 二次验收带 canon 上下文",
+      "ok": true
+    },
+    {
+      "name": "acceptance 与 scores 文件命名一致（统一不补零）",
+      "ok": true
+    },
+    {
+      "name": "loadCharacterStates 返回 aliases 字段",
+      "ok": true
+    },
+    {
+      "name": "parse/stringify 回环",
+      "ok": true
+    },
+    {
+      "name": "无 frontmatter 的文本 body 原样返回",
+      "ok": true
+    },
+    {
+      "name": "用户 skill 元数据字段可解析到 catalog",
+      "ok": true
+    },
+    {
+      "name": "lookup_upsert 写 json/md 且 list 可回读",
+      "ok": true
+    },
+    {
+      "name": "lookup_query 支持 scene/trigger 命中并返回路径",
+      "ok": true
+    },
+    {
+      "name": "lookup_remove 删除 topic",
+      "ok": true
+    },
+    {
+      "name": "lookup_rebuild 扫 knowledge 生成索引",
+      "ok": true
+    },
+    {
+      "name": "readLookup schema 自洽",
+      "ok": true
+    },
+    {
+      "name": "getChapterContext 注入 relevantPaths",
+      "ok": true
+    },
+    {
+      "name": "getChapterContext.arcContext 抽出当前章对应 arc 段",
+      "ok": true
+    },
+    {
+      "name": "getChapterContext.arcContext 识别机动章标记",
+      "ok": true
+    },
+    {
+      "name": "getChapterContext.arcContext 章号不在任何 arc 范围 → null",
+      "ok": true
+    },
+    {
+      "name": "conflict_check 发现旧设定出现在既有章节",
+      "ok": true
+    },
+    {
+      "name": "conflict_check 低风险补充可 auto_apply",
+      "ok": true
+    },
+    {
+      "name": "wrapToolResult 老 ok 格式 → status:ok",
+      "ok": true
+    },
+    {
+      "name": "wrapToolResult 原始对象 → status:ok wraps as data",
+      "ok": true
+    },
+    {
+      "name": "wrapToolResult 已是 envelope 直通",
+      "ok": true
+    },
+    {
+      "name": "wrapToolResult pending_user_reply → status:pending",
+      "ok": true
+    },
+    {
+      "name": "wrapToolError 有 kind + hint",
+      "ok": true
+    },
+    {
+      "name": "wrapToolBlocked 给出阻断结构",
+      "ok": true
+    },
+    {
+      "name": "buildSkillRuntime 汇总 must/forbid/chains",
+      "ok": true
+    },
+    {
+      "name": "write_chapter 前缺 must_call_tools 会被 skill runtime 拦截",
+      "ok": true
+    },
+    {
+      "name": "补齐 lookup_query/read_file 后 write_chapter 通过 skill runtime",
+      "ok": true
+    },
+    {
+      "name": "setup skill forbid_tools 阻止 write_chapter",
+      "ok": true
+    },
+    {
+      "name": "setting-supplement 修改设定前要求 conflict_check",
+      "ok": true
+    },
+    {
+      "name": "POV 漂移：限知作品里出现作者按式旁白 → warning",
+      "ok": true
+    },
+    {
+      "name": "称呼漂移：同段内出现林尘 / 林师弟 / 林哥 → info",
+      "ok": true
+    },
+    {
+      "name": "时间词跳变：清晨 → 深夜 短窗口内 → warning",
+      "ok": true
+    },
+    {
+      "name": "未知人名：陌生姓氏 + 说道 → info",
+      "ok": true
+    },
+    {
+      "name": "AI 味·高频词命中：瞳孔骤缩 + 脸色一变 + 心头一震 → ai_taste warning",
+      "ok": true
+    },
+    {
+      "name": "AI 味·破折号密度过高：每千字 > 2 → ai_taste 命中",
+      "ok": true
+    },
+    {
+      "name": "AI 味·章末模板：「月光下，他选了——」→ ai_taste warning",
+      "ok": true
+    },
+    {
+      "name": "节奏·对白比例偏低（< 25%）→ rhythm info/warning",
+      "ok": true
+    },
+    {
+      "name": "节奏·对白比例偏高（> 65%）→ rhythm info/warning",
+      "ok": true
+    },
+    {
+      "name": "节奏·句长单调（所有句子都 15 字左右）→ rhythm warning",
+      "ok": true
+    },
+    {
+      "name": "节奏·健康章节（对白 35% + 句长长短交替）→ 无 rhythm issue",
+      "ok": true
+    },
+    {
+      "name": "AI 味·对白内的\"——\"不应被算入破折号密度",
+      "ok": true
+    },
+    {
+      "name": "干净章节：无问题 + 落盘报告",
+      "ok": true
+    },
+    {
+      "name": "consistency_scan 工具已注册且 schema 正确",
+      "ok": true
+    },
+    {
+      "name": "wiki_ingest schema foreshadow_open[].due_chapter 已声明",
+      "ok": true
+    },
+    {
+      "name": "applyIngest 透传 due_chapter 到实体 frontmatter",
+      "ok": true
+    },
+    {
+      "name": "rebuildForeshadowLedger 在第 13 章后把 due=12 标为 overdue",
+      "ok": true
+    },
+    {
+      "name": "rebuildForeshadowLedger 在第 12 章把 due=12 标为 due_now",
+      "ok": true
+    },
+    {
+      "name": "rebuildForeshadowLedger 在第 10 章把 due=12 标为 due_soon（剩 2 章）",
+      "ok": true
+    },
+    {
+      "name": "listVolumeNodes 解析 chapter_nodes",
+      "ok": true
+    },
+    {
+      "name": "buildVolumeMilestonesMd 命中本节点 + 下节点倒计时",
+      "ok": true
+    },
+    {
+      "name": "buildVolumeMilestonesMd 命中本节点",
+      "ok": true
+    },
+    {
+      "name": "buildVolumeMilestonesMd 没节点附近时返回 null",
+      "ok": true
+    },
+    {
+      "name": "parseFeedbackEntries 解析时间 / 章号 / kind / 正文",
+      "ok": true
+    },
+    {
+      "name": "clusterFeedback 按关键词聚类，返回 count + lastSeen",
+      "ok": true
+    },
+    {
+      "name": "learnPreferences 在阈值 3 下：3 次破折号反馈被升格",
+      "ok": true
+    },
+    {
+      "name": "learnPreferences 候选未升格也要在文件里列出",
+      "ok": true
+    },
+    {
+      "name": "buildLearnedRulesMd 只产出已升格规则（≤ 1KB）",
+      "ok": true
+    },
+    {
+      "name": "learnPreferences 阈值变化：threshold=2 时形容词晋升",
+      "ok": true
+    },
+    {
+      "name": "write_chapter 强制时升 writer profile（agent 内部逻辑断言）",
+      "ok": true
+    },
+    {
+      "name": "manifest 声明 8 个阶段且世界观必备 6 文件，stage 4 为地点与物品档案",
+      "ok": true
+    },
+    {
+      "name": "只有 SOUL + 部分 world 文件时仍停在 stage=1",
+      "ok": true
+    },
+    {
+      "name": "补齐 world 后进入 stage=2，但缺 relationships/lookup 不进 stage=3",
+      "ok": true
+    },
+    {
+      "name": "补齐 relationships/lookup/locations/items/outline/volume/arc 后进入 stage=7（arc 细纲完成）",
+      "ok": true
+    },
+    {
+      "name": "setup_repair 为 stage<7 生成补齐计划",
+      "ok": true
+    },
+    {
+      "name": "setup_repair createStubs 可补齐开写前可 stub 资产（含地点 3 + 物品 1）",
+      "ok": true
+    },
+    {
+      "name": "PR3 端到端：补齐 entity 后 setup manifest 到 stage=7",
+      "ok": true
+    },
+    {
+      "name": "PR5 写章前 setup<7 硬阻断，明确跳过才放行到后续 gate",
+      "ok": true
+    },
+    {
+      "name": "PR7 跳过判定正反例",
+      "ok": true
+    },
+    {
+      "name": "PR9 write_outline 分阶段 gate",
+      "ok": true
+    },
+    {
+      "name": "PR10 stub 残留检测",
+      "ok": true
+    },
+    {
+      "name": "PR6/PR8 源码集成点存在",
+      "ok": true
+    },
+    {
+      "name": "importTextFile 默认落 imports/ 并加时间戳",
+      "ok": true
+    },
+    {
+      "name": "importTextFile 子目录白名单：knowledge/world 允许、knowledge/ 拒绝",
+      "ok": true
+    },
+    {
+      "name": "importTextFile 拒绝非文本扩展名 + 路径越界 + 空内容",
+      "ok": true
+    },
+    {
+      "name": "importTextFile overwrite=false 命中冲突抛 EEXIST",
+      "ok": true
+    },
+    {
+      "name": "uploadUserSkill 解析 frontmatter 写入 user skill",
+      "ok": true
+    },
+    {
+      "name": "uploadUserSkill 缺 name 报错；overwrite=false 命中冲突 EEXIST",
+      "ok": true
+    },
+    {
+      "name": "upload API 与前端入口集成点存在",
+      "ok": true
+    },
+    {
+      "name": "normalizeModeProfile 映射前端 mode 到 llm profile",
+      "ok": true
+    },
+    {
+      "name": "llmConfig ultra 支持专用模型并回退主模型",
+      "ok": true
+    },
+    {
+      "name": "wiki_pending 找出已保存但未沉淀章节并生成 prompt block",
+      "ok": true
+    },
+    {
+      "name": "wiki_lint_due 每 10 章且报告未覆盖时触发",
+      "ok": true
+    },
+    {
+      "name": "archiveSynthesis 写 knowledge/synthesis 且要求至少 2 来源",
+      "ok": true
+    },
+    {
+      "name": "runWikiLint 写 lint-report 并报告缺字段/stub",
+      "ok": true
+    },
+    {
+      "name": "P0 UI/backend 集成点存在",
+      "ok": true
+    },
+    {
+      "name": "draftUserSkillFromBrief 生成可编辑 user skill 草稿",
+      "ok": true
+    },
+    {
+      "name": "P1 后端提供预览器保存 API 与 skill draft API",
+      "ok": true
+    },
+    {
+      "name": "P1 Archive 文档预览支持 frontmatter 元信息与编辑保存",
+      "ok": true
+    },
+    {
+      "name": "P1 Skill Creator UI 集成草稿器",
+      "ok": true
+    },
+    {
+      "name": "P2 会话产物面板与 token 成本增强集成点存在",
+      "ok": true
+    },
+    {
+      "name": "P1-P2 样式存在",
+      "ok": true
+    },
+    {
+      "name": "skills/*.md 全部可读且有标题",
+      "ok": true
+    },
+    {
+      "name": "SKILL_CATALOG 里的 name 都对应 skills/<name>.md",
+      "ok": true
+    },
+    {
+      "name": "PR-2 核心链路 skill frontmatter 元数据完整",
+      "ok": true
+    },
+    {
+      "name": "BASE_SYSTEM 大小在预算内（< 20k 字符）",
+      "ok": true
+    },
+    {
+      "name": "没有未使用的 TOOLS 描述占位符",
+      "ok": true
+    },
+    {
+      "name": "PR-2 SKILL_CATALOG 核心链路元数据完整",
+      "ok": true
+    },
+    {
+      "name": "collectArtifacts 从写入事件汇总产物并去 novels 前缀",
+      "ok": true
+    },
+    {
+      "name": "assessCompletion 对 requiredWrite 完成 + 写入产物判定 done",
+      "ok": true
+    },
+    {
+      "name": "assessCompletion 对 ask_user 判定 needs_user",
+      "ok": true
+    },
+    {
+      "name": "final summary markdown 包含产物与下一步",
+      "ok": true
+    },
+    {
+      "name": "agent 接入 final_summary 自动兜底与 finish_task",
+      "ok": true
+    },
+    {
+      "name": "前端把 final_summary 写入 assistant 气泡",
+      "ok": true
+    },
+    {
+      "name": "意图策略对高风险模糊写章触发澄清",
+      "ok": true
+    },
+    {
+      "name": "工具语义校验识别 read_file 截断与 wiki miss",
+      "ok": true
+    },
+    {
+      "name": "self-check 反思会把查询工具标为 context_only",
+      "ok": true
+    },
+    {
+      "name": "stuck detector 识别重复失败并生成重规划信号",
+      "ok": true
+    },
+    {
+      "name": "budget-aware 会根据 turn/token 压力升级",
+      "ok": true
+    },
+    {
+      "name": "goal progress 汇总章节与任务进度",
+      "ok": true
+    },
+    {
+      "name": "failure memory 生成 failure_mode 记忆 payload",
+      "ok": true
+    },
+    {
+      "name": "agent 主循环接入智能事件",
+      "ok": true
+    },
+    {
+      "name": "extractVolumePlan 从总纲提取卷章数",
+      "ok": true
+    },
+    {
+      "name": "validateVolumeOutline 拦截卷一 40 章被写成 25 章",
+      "ok": true
+    },
+    {
+      "name": "validateVolumeOutline 要求卷纲写出 canon 与人物依据",
+      "ok": true
+    },
+    {
+      "name": "validateArcOutline 拦截越出卷纲范围的细纲",
+      "ok": true
+    },
+    {
+      "name": "detectRequiredWrites 对未指定单卷的卷纲请求生成全书卷纲 scope",
+      "ok": true
+    },
+    {
+      "name": "volume-outline skill 声明必须补齐全书所有卷纲和人物依据",
+      "ok": true
+    },
+    {
+      "name": "write_chapter 合法参数通过",
+      "ok": true
+    },
+    {
+      "name": "缺 required 字段报错",
+      "ok": true
+    },
+    {
+      "name": "chapter 是字符串 \"1\" 应报 type",
+      "ok": true
+    },
+    {
+      "name": "chapter=0 触发 minimum",
+      "ok": true
+    },
+    {
+      "name": "enum 不匹配报错",
+      "ok": true
+    },
+    {
+      "name": "数组 items 递归校验",
+      "ok": true
+    },
+    {
+      "name": "llmConfig() 默认档有 model",
+      "ok": true
+    },
+    {
+      "name": "cheap/writer 未配时回退到主模型",
+      "ok": true
+    },
+    {
+      "name": "cheap 配了就走专用档",
+      "ok": true
+    },
+    {
+      "name": "默认 max_tokens 增大且 writer 档更高",
+      "ok": true
+    },
+    {
+      "name": "detectRequiredWrite 覆盖 write_chapter 意图",
+      "ok": true
+    },
+    {
+      "name": "detectRequiredWrite 覆盖 setup 意图",
+      "ok": true
+    },
+    {
+      "name": "matchesRequiredWrite 用 chapter 比对（不靠 path）",
+      "ok": true
+    },
+    {
+      "name": "detectWritePromise 识别承诺关键词",
+      "ok": true
+    },
+    {
+      "name": "守门员：连续 ≥2 轮不调 requiredWrite 即强制",
+      "ok": true
+    },
+    {
+      "name": "promise_without_action / pure_stall 任一都立即强制（不等第二次）",
+      "ok": true
+    },
+    {
+      "name": "【修 2】requiredWrite 检测到后 system prompt 注入硬约束 directive",
+      "ok": true
+    },
+    {
+      "name": "【修 3】TEXT_QUOTA（content 过长）加速 avoidance 计数",
+      "ok": true
+    },
+    {
+      "name": "setup_work 的 path 设为 null（避免 matchesRequiredWrite 永假）",
+      "ok": true
+    },
+    {
+      "name": "守门员只在 requiredWriteDone 时清零（不再被失败调用清零）",
+      "ok": true
+    },
+    {
+      "name": "守门员对 ask_user 友好：不增不减",
+      "ok": true
+    },
+    {
+      "name": "硬上限：writeIntentNudges>=4 触发 agent_giveup",
+      "ok": true
+    },
+    {
+      "name": "写章任务使用 writer profile",
+      "ok": true
+    },
+    {
+      "name": "requiredWrite 只有工具 envelope ok 才算完成",
+      "ok": true
+    },
+    {
+      "name": "detectWritePromise 反白名单（写得/写过/写好不算承诺）",
+      "ok": true
+    },
+    {
+      "name": "文本兜底：否定语（不要写/先别写）不触发 requiredWrite",
+      "ok": true
+    },
+    {
+      "name": "承诺识别 → \"我不再废话，直接调用 write_outline 写四份卷纲\"",
+      "ok": true
+    },
+    {
+      "name": "承诺识别 → \"我应该直接开始写卷纲，不再规划\"",
+      "ok": true
+    },
+    {
+      "name": "承诺识别 → \"好，直接写。先并行读总纲\"",
+      "ok": true
+    },
+    {
+      "name": "承诺识别 → \"我马上写第 1 章\"",
+      "ok": true
+    },
+    {
+      "name": "承诺识别 → \"我现在就写\"",
+      "ok": true
+    },
+    {
+      "name": "承诺识别 → \"现在开始写正文\"",
+      "ok": true
+    },
+    {
+      "name": "承诺识别 → \"开始写第 3 章\"",
+      "ok": true
+    },
+    {
+      "name": "承诺识别 → \"立刻开始写\"",
+      "ok": true
+    },
+    {
+      "name": "承诺识别 → \"就这样写吧\"",
+      "ok": true
+    },
+    {
+      "name": "承诺识别 → \"下一步：写第 1 章\"",
+      "ok": true
+    },
+    {
+      "name": "承诺识别 → \"好，直接写\"",
+      "ok": true
+    },
+    {
+      "name": "承诺识别 → \"调用 write_chapter 写第 5 章\"",
+      "ok": true
+    },
+    {
+      "name": "承诺识别 → \"直接调用 setup_work 落盘 SOUL\"",
+      "ok": true
+    },
+    {
+      "name": "非承诺 → \"我写得不太好\"",
+      "ok": true
+    },
+    {
+      "name": "非承诺 → \"我写过类似的\"",
+      "ok": true
+    },
+    {
+      "name": "非承诺 → \"我写好了\"",
+      "ok": true
+    },
+    {
+      "name": "非承诺 → \"不要写第 3 章\"",
+      "ok": true
+    },
+    {
+      "name": "非承诺 → \"先别写，让我想想\"",
+      "ok": true
+    },
+    {
+      "name": "非承诺 → \"这一段写得很棒\"",
+      "ok": true
+    },
+    {
+      "name": "非承诺 → \"我们讨论一下要写什么\"",
+      "ok": true
+    },
+    {
+      "name": "非承诺 → \"能不能不写打斗\"",
+      "ok": true
+    },
+    {
+      "name": "短应答\"嗯\"继承前一条 write_chapter 意图的 chapter 号",
+      "ok": true
+    },
+    {
+      "name": "skills.readUserSkill / deleteUserSkill 导出",
+      "ok": true
+    },
+    {
+      "name": "projects.deleteProject 导出且有路径安全检查",
+      "ok": true
+    },
+    {
+      "name": "memory.listMemories / deleteMemory 导出",
+      "ok": true
+    },
+    {
+      "name": "index.js 注册 Batch1+2 所有新 API",
+      "ok": true
+    },
+    {
+      "name": "前端面板组件齐全",
+      "ok": true
+    },
+    {
+      "name": "TopBar 已挂 6 个新按钮 + SetupStageBadge",
+      "ok": true
+    },
+    {
+      "name": "SetupStageBadge 展示 manifest 全量缺口与下一阶段",
+      "ok": true
+    },
+    {
+      "name": "App.jsx 已声明 onExportNovel / onDeleteProject + 4 个 panel state",
+      "ok": true
+    },
+    {
+      "name": "Preview 已接 rollback + backup API",
+      "ok": true
+    },
+    {
+      "name": "【B4】伏笔预警 helper + 注入",
+      "ok": true
+    },
+    {
+      "name": "【B1】chapter-embed.js 存在 + search_chapters/chapter_reindex 工具",
+      "ok": true
+    },
+    {
+      "name": "【B2】style-fingerprint.js 存在 + system prompt 注入",
+      "ok": true
+    },
+    {
+      "name": "【B3】character_states 注入",
+      "ok": true
+    },
+    {
+      "name": "【A4】reader-score.js 存在 + reader_score 工具 + 异步触发",
+      "ok": true
+    },
+    {
+      "name": "【F1】recent_user_feedback 注入",
+      "ok": true
+    },
+    {
+      "name": "【A2】beat-checker.js 存在 + acceptance 集成",
+      "ok": true
+    },
+    {
+      "name": "【A1】chapter-variants.js 存在 + chapter_alternates 工具",
+      "ok": true
+    },
+    {
+      "name": "【D1】Preview diff 视图",
+      "ok": true
+    },
+    {
+      "name": "【UX】LiveActivity 实时活动条已接入聊天界面",
+      "ok": true
+    },
+    {
+      "name": "read_file 返回内容被 <user_file> 包裹",
+      "ok": true
+    },
+    {
+      "name": "BASE_SYSTEM 提到 <user_file> 安全铁律",
+      "ok": true
+    },
+    {
+      "name": "prepare_write_chapter 工具已注册",
+      "ok": true
+    },
+    {
+      "name": "detectRequiredWrites 支持章节范围队列",
+      "ok": true
+    },
+    {
+      "name": "sortToolCallsForExecution 把前置只读工具排到写工具前",
+      "ok": true
+    },
+    {
+      "name": "task-runtime 规范化并自动推进当前任务",
+      "ok": true
+    },
+    {
+      "name": "recovery-policy 能从 skill_must_call_tools 自动补前置工具",
+      "ok": true
+    },
+    {
+      "name": "write-preflight 可抽取中文人物关键词",
+      "ok": true
+    },
+    {
+      "name": "agent 主循环支持只读工具并发执行",
+      "ok": true
+    },
+    {
+      "name": "agent 主循环支持只读工具 per-run 缓存",
+      "ok": true
+    },
+    {
+      "name": "prepare_write_chapter 不应无条件满足 wiki/context gate",
+      "ok": true
+    },
+    {
+      "name": "agent 每轮 LLM 前执行 runtime prompt 压缩",
+      "ok": true
+    },
+    {
+      "name": "scratchpad 会反向注入 system prompt",
+      "ok": true
+    },
+    {
+      "name": "agent-state 支持继续时恢复 requiredWrites",
+      "ok": true
+    },
+    {
+      "name": "runTool 已拆成 policy wrapper 与 core 分派",
+      "ok": true
+    },
+    {
+      "name": "工具执行支持超时保护",
+      "ok": true
+    },
+    {
+      "name": "工具级退避只针对可重试工具错误",
+      "ok": true
+    },
+    {
+      "name": "gate 自动注入安全前置工具",
+      "ok": true
+    },
+    {
+      "name": "写入意图耗尽后改为软停 ask_user 而非 agent_giveup",
+      "ok": true
+    },
+    {
+      "name": "soft-stop payload 含恢复选项与最后工具 hint",
+      "ok": true
+    },
+    {
+      "name": "agent-state 支持非继续语义恢复提示",
+      "ok": true
+    },
+    {
+      "name": "TurnRunner 基础轮次快照可用",
+      "ok": true
+    },
+    {
+      "name": "写入预览与前端 UX 事件已接入",
+      "ok": true
+    },
+    {
+      "name": "trace replay API 已提供摘要回放能力",
+      "ok": true
+    }
+  ]
+}

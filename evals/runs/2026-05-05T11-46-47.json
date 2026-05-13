@@ -1,0 +1,158 @@
+{
+  "at": "2026-05-05T11:46:47.764Z",
+  "stats": {
+    "total": 37,
+    "passed": 37,
+    "failed": 0
+  },
+  "results": [
+    {
+      "name": "TOOLS 非空且每条有 name/description/parameters",
+      "ok": true
+    },
+    {
+      "name": "工具名全局唯一",
+      "ok": true
+    },
+    {
+      "name": "required 字段的参数必须在 properties 中声明",
+      "ok": true
+    },
+    {
+      "name": "关键工具在 TOOLS 中存在",
+      "ok": true
+    },
+    {
+      "name": "inferOwnerTool 所有返回值都在 WRITE_RULES 里",
+      "ok": true
+    },
+    {
+      "name": "非法越界路径会被 resolveInProject 拒绝",
+      "ok": true
+    },
+    {
+      "name": "短应答不装载 skill",
+      "ok": true
+    },
+    {
+      "name": "\"写第 3 章\" 触发 chinese-novelist/chapter-planner/wiki-query",
+      "ok": true
+    },
+    {
+      "name": "\"改写这段\" 挂 revision",
+      "ok": true
+    },
+    {
+      "name": "无 SOUL + \"我想写本书\" 触发 work-setup",
+      "ok": true
+    },
+    {
+      "name": "autoStage after:write_chapter 挂 wiki-ingest",
+      "ok": true
+    },
+    {
+      "name": "好样本比差样本得分高",
+      "ok": true
+    },
+    {
+      "name": "countWords 只计 CJK + 英文词",
+      "ok": true
+    },
+    {
+      "name": "AI 味样本触发 anti_ai 扣分",
+      "ok": true
+    },
+    {
+      "name": "parse/stringify 回环",
+      "ok": true
+    },
+    {
+      "name": "无 frontmatter 的文本 body 原样返回",
+      "ok": true
+    },
+    {
+      "name": "wrapToolResult 老 ok 格式 → status:ok",
+      "ok": true
+    },
+    {
+      "name": "wrapToolResult 原始对象 → status:ok wraps as data",
+      "ok": true
+    },
+    {
+      "name": "wrapToolResult 已是 envelope 直通",
+      "ok": true
+    },
+    {
+      "name": "wrapToolResult pending_user_reply → status:pending",
+      "ok": true
+    },
+    {
+      "name": "wrapToolError 有 kind + hint",
+      "ok": true
+    },
+    {
+      "name": "wrapToolBlocked 给出阻断结构",
+      "ok": true
+    },
+    {
+      "name": "skills/*.md 全部可读且有标题",
+      "ok": true
+    },
+    {
+      "name": "SKILL_CATALOG 里的 name 都对应 skills/<name>.md",
+      "ok": true
+    },
+    {
+      "name": "BASE_SYSTEM 大小在预算内（< 20k 字符）",
+      "ok": true
+    },
+    {
+      "name": "没有未使用的 TOOLS 描述占位符",
+      "ok": true
+    },
+    {
+      "name": "write_chapter 合法参数通过",
+      "ok": true
+    },
+    {
+      "name": "缺 required 字段报错",
+      "ok": true
+    },
+    {
+      "name": "chapter 是字符串 \"1\" 应报 type",
+      "ok": true
+    },
+    {
+      "name": "chapter=0 触发 minimum",
+      "ok": true
+    },
+    {
+      "name": "enum 不匹配报错",
+      "ok": true
+    },
+    {
+      "name": "数组 items 递归校验",
+      "ok": true
+    },
+    {
+      "name": "llmConfig() 默认档有 model",
+      "ok": true
+    },
+    {
+      "name": "cheap/writer 未配时回退到主模型",
+      "ok": true
+    },
+    {
+      "name": "cheap 配了就走专用档",
+      "ok": true
+    },
+    {
+      "name": "read_file 返回内容被 <user_file> 包裹",
+      "ok": true
+    },
+    {
+      "name": "BASE_SYSTEM 提到 <user_file> 安全铁律",
+      "ok": true
+    }
+  ]
+}

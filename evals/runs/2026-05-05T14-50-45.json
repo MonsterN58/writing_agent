@@ -1,0 +1,322 @@
+{
+  "at": "2026-05-05T14:50:45.166Z",
+  "stats": {
+    "total": 78,
+    "passed": 78,
+    "failed": 0
+  },
+  "results": [
+    {
+      "name": "TOOLS 非空且每条有 name/description/parameters",
+      "ok": true
+    },
+    {
+      "name": "工具名全局唯一",
+      "ok": true
+    },
+    {
+      "name": "required 字段的参数必须在 properties 中声明",
+      "ok": true
+    },
+    {
+      "name": "关键工具在 TOOLS 中存在",
+      "ok": true
+    },
+    {
+      "name": "inferOwnerTool 所有返回值都在 WRITE_RULES 里",
+      "ok": true
+    },
+    {
+      "name": "非法越界路径会被 resolveInProject 拒绝",
+      "ok": true
+    },
+    {
+      "name": "短应答不装载 skill",
+      "ok": true
+    },
+    {
+      "name": "\"写第 3 章\" 触发 chinese-novelist/chapter-planner/wiki-query",
+      "ok": true
+    },
+    {
+      "name": "\"改写这段\" 挂 revision",
+      "ok": true
+    },
+    {
+      "name": "无 SOUL + \"我想写本书\" 触发 work-setup",
+      "ok": true
+    },
+    {
+      "name": "autoStage after:write_chapter 挂 wiki-ingest",
+      "ok": true
+    },
+    {
+      "name": "好样本比差样本得分高",
+      "ok": true
+    },
+    {
+      "name": "countWords 只计 CJK + 英文词",
+      "ok": true
+    },
+    {
+      "name": "AI 味样本触发 anti_ai 扣分",
+      "ok": true
+    },
+    {
+      "name": "parse/stringify 回环",
+      "ok": true
+    },
+    {
+      "name": "无 frontmatter 的文本 body 原样返回",
+      "ok": true
+    },
+    {
+      "name": "wrapToolResult 老 ok 格式 → status:ok",
+      "ok": true
+    },
+    {
+      "name": "wrapToolResult 原始对象 → status:ok wraps as data",
+      "ok": true
+    },
+    {
+      "name": "wrapToolResult 已是 envelope 直通",
+      "ok": true
+    },
+    {
+      "name": "wrapToolResult pending_user_reply → status:pending",
+      "ok": true
+    },
+    {
+      "name": "wrapToolError 有 kind + hint",
+      "ok": true
+    },
+    {
+      "name": "wrapToolBlocked 给出阻断结构",
+      "ok": true
+    },
+    {
+      "name": "skills/*.md 全部可读且有标题",
+      "ok": true
+    },
+    {
+      "name": "SKILL_CATALOG 里的 name 都对应 skills/<name>.md",
+      "ok": true
+    },
+    {
+      "name": "BASE_SYSTEM 大小在预算内（< 20k 字符）",
+      "ok": true
+    },
+    {
+      "name": "没有未使用的 TOOLS 描述占位符",
+      "ok": true
+    },
+    {
+      "name": "write_chapter 合法参数通过",
+      "ok": true
+    },
+    {
+      "name": "缺 required 字段报错",
+      "ok": true
+    },
+    {
+      "name": "chapter 是字符串 \"1\" 应报 type",
+      "ok": true
+    },
+    {
+      "name": "chapter=0 触发 minimum",
+      "ok": true
+    },
+    {
+      "name": "enum 不匹配报错",
+      "ok": true
+    },
+    {
+      "name": "数组 items 递归校验",
+      "ok": true
+    },
+    {
+      "name": "llmConfig() 默认档有 model",
+      "ok": true
+    },
+    {
+      "name": "cheap/writer 未配时回退到主模型",
+      "ok": true
+    },
+    {
+      "name": "cheap 配了就走专用档",
+      "ok": true
+    },
+    {
+      "name": "detectRequiredWrite 覆盖 write_chapter 意图",
+      "ok": true
+    },
+    {
+      "name": "detectRequiredWrite 覆盖 setup 意图",
+      "ok": true
+    },
+    {
+      "name": "matchesRequiredWrite 用 chapter 比对（不靠 path）",
+      "ok": true
+    },
+    {
+      "name": "detectWritePromise 识别承诺关键词",
+      "ok": true
+    },
+    {
+      "name": "守门员：连续 ≥2 轮不调 requiredWrite 即强制",
+      "ok": true
+    },
+    {
+      "name": "promise_without_action 不等第二次 nudge 直接强制",
+      "ok": true
+    },
+    {
+      "name": "setup_work 的 path 设为 null（避免 matchesRequiredWrite 永假）",
+      "ok": true
+    },
+    {
+      "name": "守门员只在 requiredWriteDone 时清零（不再被失败调用清零）",
+      "ok": true
+    },
+    {
+      "name": "守门员对 ask_user 友好：不增不减",
+      "ok": true
+    },
+    {
+      "name": "硬上限：writeIntentNudges>=4 触发 agent_giveup",
+      "ok": true
+    },
+    {
+      "name": "detectWritePromise 反白名单（写得/写过/写好不算承诺）",
+      "ok": true
+    },
+    {
+      "name": "文本兜底：否定语（不要写/先别写）不触发 requiredWrite",
+      "ok": true
+    },
+    {
+      "name": "承诺识别 → \"我不再废话，直接调用 write_outline 写四份卷纲\"",
+      "ok": true
+    },
+    {
+      "name": "承诺识别 → \"我应该直接开始写卷纲，不再规划\"",
+      "ok": true
+    },
+    {
+      "name": "承诺识别 → \"好，直接写。先并行读总纲\"",
+      "ok": true
+    },
+    {
+      "name": "承诺识别 → \"我马上写第 1 章\"",
+      "ok": true
+    },
+    {
+      "name": "承诺识别 → \"我现在就写\"",
+      "ok": true
+    },
+    {
+      "name": "承诺识别 → \"现在开始写正文\"",
+      "ok": true
+    },
+    {
+      "name": "承诺识别 → \"开始写第 3 章\"",
+      "ok": true
+    },
+    {
+      "name": "承诺识别 → \"立刻开始写\"",
+      "ok": true
+    },
+    {
+      "name": "承诺识别 → \"就这样写吧\"",
+      "ok": true
+    },
+    {
+      "name": "承诺识别 → \"下一步：写第 1 章\"",
+      "ok": true
+    },
+    {
+      "name": "承诺识别 → \"好，直接写\"",
+      "ok": true
+    },
+    {
+      "name": "承诺识别 → \"调用 write_chapter 写第 5 章\"",
+      "ok": true
+    },
+    {
+      "name": "承诺识别 → \"直接调用 setup_work 落盘 SOUL\"",
+      "ok": true
+    },
+    {
+      "name": "非承诺 → \"我写得不太好\"",
+      "ok": true
+    },
+    {
+      "name": "非承诺 → \"我写过类似的\"",
+      "ok": true
+    },
+    {
+      "name": "非承诺 → \"我写好了\"",
+      "ok": true
+    },
+    {
+      "name": "非承诺 → \"不要写第 3 章\"",
+      "ok": true
+    },
+    {
+      "name": "非承诺 → \"先别写，让我想想\"",
+      "ok": true
+    },
+    {
+      "name": "非承诺 → \"这一段写得很棒\"",
+      "ok": true
+    },
+    {
+      "name": "非承诺 → \"我们讨论一下要写什么\"",
+      "ok": true
+    },
+    {
+      "name": "非承诺 → \"能不能不写打斗\"",
+      "ok": true
+    },
+    {
+      "name": "短应答\"嗯\"继承前一条 write_chapter 意图的 chapter 号",
+      "ok": true
+    },
+    {
+      "name": "skills.readUserSkill / deleteUserSkill 导出",
+      "ok": true
+    },
+    {
+      "name": "projects.deleteProject 导出且有路径安全检查",
+      "ok": true
+    },
+    {
+      "name": "memory.listMemories / deleteMemory 导出",
+      "ok": true
+    },
+    {
+      "name": "index.js 注册 Batch1+2 所有新 API",
+      "ok": true
+    },
+    {
+      "name": "前端面板组件齐全",
+      "ok": true
+    },
+    {
+      "name": "TopBar 已挂 6 个新按钮 + SetupStageBadge",
+      "ok": true
+    },
+    {
+      "name": "Preview 已接 rollback + backup API",
+      "ok": true
+    },
+    {
+      "name": "read_file 返回内容被 <user_file> 包裹",
+      "ok": true
+    },
+    {
+      "name": "BASE_SYSTEM 提到 <user_file> 安全铁律",
+      "ok": true
+    }
+  ]
+}

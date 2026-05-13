@@ -1,0 +1,197 @@
+
+鈹佲攣鈹?tool schema 鈹佲攣鈹?  鉁?TOOLS 闈炵┖涓旀瘡鏉℃湁 name/description/parameters
+  鉁?宸ュ叿鍚嶅叏灞€鍞竴
+  鉁?required 瀛楁鐨勫弬鏁板繀椤诲湪 properties 涓０鏄?  鉁?鍏抽敭宸ュ叿鍦?TOOLS 涓瓨鍦?
+鈹佲攣鈹?write rules 鈹佲攣鈹?  鉁?inferOwnerTool 鎵€鏈夎繑鍥炲€奸兘鍦?WRITE_RULES 閲?  鉁?闈炴硶瓒婄晫璺緞浼氳 resolveInProject 鎷掔粷
+
+鈹佲攣鈹?routeSkills 鈹佲攣鈹?  鉁?鐭簲绛斾笉瑁呰浇 skill
+  鉁?"鍐欑 3 绔? 瑙﹀彂 chinese-novelist/chapter-planner/wiki-query
+  鉁?"鏀瑰啓杩欐" 鎸?revision
+  鉁?鏃?SOUL + "鎴戞兂鍐欐湰涔? 瑙﹀彂 work-setup
+  鉁?autoStage after:write_chapter 鎸?wiki-ingest
+  鉁?绔嬮」鐭簲绛?缁х画"鎸?setup-pipeline + 褰撳墠闃舵 skill
+  鉁?璁惧畾鏈畬鎴愭椂鍐欑珷浼氭寕 setup-pipeline + 褰撳墠闃舵 skill
+
+鈹佲攣鈹?quality scoring 鈹佲攣鈹?  鉁?濂芥牱鏈瘮宸牱鏈緱鍒嗛珮
+  鉁?countWords 鍙 CJK + 鑻辨枃璇?  鉁?AI 鍛虫牱鏈Е鍙?anti_ai 鎵ｅ垎
+
+鈹佲攣鈹?绔犻檯/鍦烘櫙杩囨浮 鈹佲攣鈹?  鉁?analyzeTransitions: 纭垏鏍锋湰 bridgeRatio<0.5
+  鉁?analyzeTransitions: 骞虫粦鏍锋湰 bridgeRatio>=0.7
+  鉁?analyzeTransitions: 绔犻鍛戒腑纭敋鐐?鈫?inter.strong=true
+  鉁?analyzeTransitions: 绔犻涓庝笂绔犳湯瀹屽叏鏃犻敋 鈫?inter.strong=false
+  鉁?analyzeTransitions: 绗竴绔犳棤 prevEnding 鈫?inter.strong=true 鑷姩閫氳繃
+  鉁?scoreChapterContent: 鍔犲叆 transition 缁村害
+  鉁?scoreChapterContent: 骞虫粦鏍锋湰 transition 鍒嗛珮浜庣‖鍒囨牱鏈?  鉁?scoreChapterContent: 绔犻檯纭垏 鈫?issues 鍚?绔犻檯纭垏"
+  鉁?scoreChapterContent: 娈甸檯纭垏澶?鈫?issues 鍚?娈甸檯纭垏"
+  鉁?BASE_SYSTEM 鍚?绗?-1.5 鏉?鍦烘櫙杩囨浮閾佸緥
+  鉁?critic.js 鍚珷闄呰鎺ユ 搂6
+  鉁?ChapterSavedCard.DIM_LABEL 涓庡悗绔淮搴?keys 鍚屾
+  鉁?ChapterSavedCard verdict 鐢?pass锛堜笌鍚庣涓€鑷达級锛屼笉鍐嶇敤 accept
+  鉁?acceptance.js 鎶?prevEnding/anchors 浼犵粰 scoreChapterContent
+  鉁?AcceptanceCard 璇?relPath锛堜笌鍚庣 emit 涓€鑷达級
+  鉁?chapter_critic 浜嬩欢鎼哄甫 issues 鏁扮粍
+  鉁?auto_repair 浜屾楠屾敹甯?canon 涓婁笅鏂?  鉁?acceptance 涓?scores 鏂囦欢鍛藉悕涓€鑷达紙缁熶竴涓嶈ˉ闆讹級
+  鉁?loadCharacterStates 杩斿洖 aliases 瀛楁
+
+鈹佲攣鈹?frontmatter 鈹佲攣鈹?  鉁?parse/stringify 鍥炵幆
+  鉁?鏃?frontmatter 鐨勬枃鏈?body 鍘熸牱杩斿洖
+  鉁?鐢ㄦ埛 skill 鍏冩暟鎹瓧娈靛彲瑙ｆ瀽鍒?catalog
+
+鈹佲攣鈹?lookup service 鈹佲攣鈹?  鉁?lookup_upsert 鍐?json/md 涓?list 鍙洖璇?  鉁?lookup_query 鏀寔 scene/trigger 鍛戒腑骞惰繑鍥炶矾寰?  鉁?lookup_remove 鍒犻櫎 topic
+  鉁?lookup_rebuild 鎵?knowledge 鐢熸垚绱㈠紩
+  鉁?readLookup schema 鑷唇
+  鉁?getChapterContext 娉ㄥ叆 relevantPaths
+
+鈹佲攣鈹?conflict service 鈹佲攣鈹?  鉁?conflict_check 鍙戠幇鏃ц瀹氬嚭鐜板湪鏃㈡湁绔犺妭
+  鉁?conflict_check 浣庨闄╄ˉ鍏呭彲 auto_apply
+
+鈹佲攣鈹?tool envelope 鈹佲攣鈹?  鉁?wrapToolResult 鑰?ok 鏍煎紡 鈫?status:ok
+  鉁?wrapToolResult 鍘熷瀵硅薄 鈫?status:ok wraps as data
+  鉁?wrapToolResult 宸叉槸 envelope 鐩撮€?  鉁?wrapToolResult pending_user_reply 鈫?status:pending
+  鉁?wrapToolError 鏈?kind + hint
+  鉁?wrapToolBlocked 缁欏嚭闃绘柇缁撴瀯
+
+鈹佲攣鈹?skill runtime guards 鈹佲攣鈹?  鉁?buildSkillRuntime 姹囨€?must/forbid/chains
+  鉁?write_chapter 鍓嶇己 must_call_tools 浼氳 skill runtime 鎷︽埅
+  鉁?琛ラ綈 lookup_query/read_file 鍚?write_chapter 閫氳繃 skill runtime
+  鉁?setup skill forbid_tools 闃绘 write_chapter
+  鉁?setting-supplement 淇敼璁惧畾鍓嶈姹?conflict_check
+
+鈹佲攣鈹?setup manifest 鈹佲攣鈹?  鉁?manifest 澹版槑 7 涓樁娈典笖涓栫晫瑙傚繀澶?6 鏂囦欢
+  鉁?鍙湁 SOUL + 閮ㄥ垎 world 鏂囦欢鏃朵粛鍋滃湪 stage=1
+  鉁?琛ラ綈 world 鍚庤繘鍏?stage=2锛屼絾缂?relationships/lookup 涓嶈繘 stage=3
+  鉁?琛ラ綈 relationships/lookup/outline/volume/arc 鍚庤繘鍏?stage=6
+
+鈹佲攣鈹?PR3-5 setup repair + hard gate 鈹佲攣鈹?  鉁?setup_repair 涓?stage<6 鐢熸垚琛ラ綈璁″垝
+  鉁?setup_repair createStubs 鍙ˉ榻愬紑鍐欏墠鍙?stub 璧勪骇
+  鉁?PR3 绔埌绔細琛ラ綈 entity 鍚?setup manifest 鍒?stage=6
+  鉁?PR5 鍐欑珷鍓?setup<6 纭樆鏂紝鏄庣‘璺宠繃鎵嶆斁琛屽埌鍚庣画 gate
+  鉁?PR7 璺宠繃鍒ゅ畾姝ｅ弽渚?  鉁?PR9 write_outline 鍒嗛樁娈?gate
+  鉁?PR10 stub 娈嬬暀妫€娴?  鉁?PR6/PR8 婧愮爜闆嗘垚鐐瑰瓨鍦?
+鈹佲攣鈹?upload service (import-text + skill upload) 鈹佲攣鈹?  鉁?importTextFile 榛樿钀?imports/ 骞跺姞鏃堕棿鎴?  鉁?importTextFile 瀛愮洰褰曠櫧鍚嶅崟锛歬nowledge/world 鍏佽銆乲nowledge/ 鎷掔粷
+  鉁?importTextFile 鎷掔粷闈炴枃鏈墿灞曞悕 + 璺緞瓒婄晫 + 绌哄唴瀹?  鉁?importTextFile overwrite=false 鍛戒腑鍐茬獊鎶?EEXIST
+  鉁?uploadUserSkill 瑙ｆ瀽 frontmatter 鍐欏叆 user skill
+  鉁?uploadUserSkill 缂?name 鎶ラ敊锛沷verwrite=false 鍛戒腑鍐茬獊 EEXIST
+  鉁?upload API 涓庡墠绔叆鍙ｉ泦鎴愮偣瀛樺湪
+
+鈹佲攣鈹?wiki automation P0 鈹佲攣鈹?  鉁?normalizeModeProfile 鏄犲皠鍓嶇 mode 鍒?llm profile
+  鉁?llmConfig ultra 鏀寔涓撶敤妯″瀷骞跺洖閫€涓绘ā鍨?  鉁?wiki_pending 鎵惧嚭宸蹭繚瀛樹絾鏈矇娣€绔犺妭骞剁敓鎴?prompt block
+  鉁?wiki_lint_due 姣?10 绔犱笖鎶ュ憡鏈鐩栨椂瑙﹀彂
+  鉁?archiveSynthesis 鍐?knowledge/synthesis 涓旇姹傝嚦灏?2 鏉ユ簮
+  鉁?runWikiLint 鍐?lint-report 骞舵姤鍛婄己瀛楁/stub
+  鉁?P0 UI/backend 闆嗘垚鐐瑰瓨鍦?
+鈹佲攣鈹?P1-P2 archive / skill creator / artifacts / cost UI 鈹佲攣鈹?  鉁?draftUserSkillFromBrief 鐢熸垚鍙紪杈?user skill 鑽夌
+  鉁?P1 鍚庣鎻愪緵棰勮鍣ㄤ繚瀛?API 涓?skill draft API
+  鉁?P1 Archive 鏂囨。棰勮鏀寔 frontmatter 鍏冧俊鎭笌缂栬緫淇濆瓨
+  鉁?P1 Skill Creator UI 闆嗘垚鑽夌鍣?  鉁?P2 浼氳瘽浜х墿闈㈡澘涓?token 鎴愭湰澧炲己闆嗘垚鐐瑰瓨鍦?  鉁?P1-P2 鏍峰紡瀛樺湪
+    缂哄皯鏍峰紡 pv-meta
+
+鈹佲攣鈹?skills files 鈹佲攣鈹?  鉁?skills/*.md 鍏ㄩ儴鍙涓旀湁鏍囬
+  鉁?SKILL_CATALOG 閲岀殑 name 閮藉搴?skills/<name>.md
+  鉁?PR-2 鏍稿績閾捐矾 skill frontmatter 鍏冩暟鎹畬鏁?
+鈹佲攣鈹?prompt budget 鈹佲攣鈹?  鉁?BASE_SYSTEM 澶у皬鍦ㄩ绠楀唴锛? 20k 瀛楃锛?  鉁?娌℃湁鏈娇鐢ㄧ殑 TOOLS 鎻忚堪鍗犱綅绗?  鉁?PR-2 SKILL_CATALOG 鏍稿績閾捐矾鍏冩暟鎹畬鏁?
+鈹佲攣鈹?completion policy / final summary 鈹佲攣鈹?  鉁?collectArtifacts 浠庡啓鍏ヤ簨浠舵眹鎬讳骇鐗╁苟鍘?novels 鍓嶇紑
+  鉁?assessCompletion 瀵?requiredWrite 瀹屾垚 + 鍐欏叆浜х墿鍒ゅ畾 done
+  鉁?assessCompletion 瀵?ask_user 鍒ゅ畾 needs_user
+  鉁?final summary markdown 鍖呭惈浜х墿涓庝笅涓€姝?  鉁?agent 鎺ュ叆 final_summary 鑷姩鍏滃簳涓?finish_task
+  鉁?鍓嶇鎶?final_summary 鍐欏叆 assistant 姘旀场
+
+鈹佲攣鈹?agent intelligence upgrades 鈹佲攣鈹?  鉁?鎰忓浘绛栫暐瀵归珮椋庨櫓妯＄硦鍐欑珷瑙﹀彂婢勬竻
+  鉁?宸ュ叿璇箟鏍￠獙璇嗗埆 read_file 鎴柇涓?wiki miss
+  鉁?self-check 鍙嶆€濅細鎶婃煡璇㈠伐鍏锋爣涓?context_only
+  鉁?stuck detector 璇嗗埆閲嶅澶辫触骞剁敓鎴愰噸瑙勫垝淇″彿
+  鉁?budget-aware 浼氭牴鎹?turn/token 鍘嬪姏鍗囩骇
+  鉁?goal progress 姹囨€荤珷鑺備笌浠诲姟杩涘害
+  鉁?failure memory 鐢熸垚 failure_mode 璁板繂 payload
+  鉁?agent 涓诲惊鐜帴鍏ユ櫤鑳戒簨浠?
+鈹佲攣鈹?outline guard / volume and arc consistency 鈹佲攣鈹?  鉁?extractVolumePlan 浠庢€荤翰鎻愬彇鍗风珷鏁?  鉁?validateVolumeOutline 鎷︽埅鍗蜂竴 40 绔犺鍐欐垚 25 绔?  鉁?validateVolumeOutline 瑕佹眰鍗风翰鍐欏嚭 canon 涓庝汉鐗╀緷鎹?  鉁?validateArcOutline 鎷︽埅瓒婂嚭鍗风翰鑼冨洿鐨勭粏绾?  鉁?detectRequiredWrites 瀵规湭鎸囧畾鍗曞嵎鐨勫嵎绾茶姹傜敓鎴愬叏涔﹀嵎绾?scope
+  鉁?volume-outline skill 澹版槑蹇呴』琛ラ綈鍏ㄤ功鎵€鏈夊嵎绾插拰浜虹墿渚濇嵁
+
+鈹佲攣鈹?tool-validate 鈹佲攣鈹?  鉁?write_chapter 鍚堟硶鍙傛暟閫氳繃
+  鉁?缂?required 瀛楁鎶ラ敊
+  鉁?chapter 鏄瓧绗︿覆 "1" 搴旀姤 type
+  鉁?chapter=0 瑙﹀彂 minimum
+  鉁?enum 涓嶅尮閰嶆姤閿?  鉁?鏁扮粍 items 閫掑綊鏍￠獙
+
+鈹佲攣鈹?model routing 鈹佲攣鈹?  鉁?llmConfig() 榛樿妗ｆ湁 model
+  鉁?cheap/writer 鏈厤鏃跺洖閫€鍒颁富妯″瀷
+  鉁?cheap 閰嶄簡灏辫蛋涓撶敤妗?  鉁?榛樿 max_tokens 澧炲ぇ涓?writer 妗ｆ洿楂?
+鈹佲攣鈹?write intent gate 鈹佲攣鈹?  鉁?detectRequiredWrite 瑕嗙洊 write_chapter 鎰忓浘
+  鉁?detectRequiredWrite 瑕嗙洊 setup 鎰忓浘
+  鉁?matchesRequiredWrite 鐢?chapter 姣斿锛堜笉闈?path锛?  鉁?detectWritePromise 璇嗗埆鎵胯鍏抽敭璇?  鉁?瀹堥棬鍛橈細杩炵画 鈮? 杞笉璋?requiredWrite 鍗冲己鍒?  鉁?promise_without_action / pure_stall 浠讳竴閮界珛鍗冲己鍒讹紙涓嶇瓑绗簩娆★級
+  鉁?銆愪慨 2銆憆equiredWrite 妫€娴嬪埌鍚?system prompt 娉ㄥ叆纭害鏉?directive
+  鉁?銆愪慨 3銆慣EXT_QUOTA锛坈ontent 杩囬暱锛夊姞閫?avoidance 璁℃暟
+  鉁?setup_work 鐨?path 璁句负 null锛堥伩鍏?matchesRequiredWrite 姘稿亣锛?  鉁?瀹堥棬鍛樺彧鍦?requiredWriteDone 鏃舵竻闆讹紙涓嶅啀琚け璐ヨ皟鐢ㄦ竻闆讹級
+  鉁?瀹堥棬鍛樺 ask_user 鍙嬪ソ锛氫笉澧炰笉鍑?  鉁?纭笂闄愶細writeIntentNudges>=4 瑙﹀彂 agent_giveup
+  鉁?鍐欑珷浠诲姟浣跨敤 writer profile
+  鉁?requiredWrite 鍙湁宸ュ叿 envelope ok 鎵嶇畻瀹屾垚
+  鉁?detectWritePromise 鍙嶇櫧鍚嶅崟锛堝啓寰?鍐欒繃/鍐欏ソ涓嶇畻鎵胯锛?  鉁?鏂囨湰鍏滃簳锛氬惁瀹氳锛堜笉瑕佸啓/鍏堝埆鍐欙級涓嶈Е鍙?requiredWrite
+
+鈹佲攣鈹?detectWritePromise behavior 鈹佲攣鈹?  鉁?鎵胯璇嗗埆 鈫?"鎴戜笉鍐嶅簾璇濓紝鐩存帴璋冪敤 write_outline 鍐欏洓浠藉嵎绾?
+  鉁?鎵胯璇嗗埆 鈫?"鎴戝簲璇ョ洿鎺ュ紑濮嬪啓鍗风翰锛屼笉鍐嶈鍒?
+  鉁?鎵胯璇嗗埆 鈫?"濂斤紝鐩存帴鍐欍€傚厛骞惰璇绘€荤翰"
+  鉁?鎵胯璇嗗埆 鈫?"鎴戦┈涓婂啓绗?1 绔?
+  鉁?鎵胯璇嗗埆 鈫?"鎴戠幇鍦ㄥ氨鍐?
+  鉁?鎵胯璇嗗埆 鈫?"鐜板湪寮€濮嬪啓姝ｆ枃"
+  鉁?鎵胯璇嗗埆 鈫?"寮€濮嬪啓绗?3 绔?
+  鉁?鎵胯璇嗗埆 鈫?"绔嬪埢寮€濮嬪啓"
+  鉁?鎵胯璇嗗埆 鈫?"灏辫繖鏍峰啓鍚?
+  鉁?鎵胯璇嗗埆 鈫?"涓嬩竴姝ワ細鍐欑 1 绔?
+  鉁?鎵胯璇嗗埆 鈫?"濂斤紝鐩存帴鍐?
+  鉁?鎵胯璇嗗埆 鈫?"璋冪敤 write_chapter 鍐欑 5 绔?
+  鉁?鎵胯璇嗗埆 鈫?"鐩存帴璋冪敤 setup_work 钀界洏 SOUL"
+  鉁?闈炴壙璇?鈫?"鎴戝啓寰椾笉澶ソ"
+  鉁?闈炴壙璇?鈫?"鎴戝啓杩囩被浼肩殑"
+  鉁?闈炴壙璇?鈫?"鎴戝啓濂戒簡"
+  鉁?闈炴壙璇?鈫?"涓嶈鍐欑 3 绔?
+  鉁?闈炴壙璇?鈫?"鍏堝埆鍐欙紝璁╂垜鎯虫兂"
+  鉁?闈炴壙璇?鈫?"杩欎竴娈靛啓寰楀緢妫?
+  鉁?闈炴壙璇?鈫?"鎴戜滑璁ㄨ涓€涓嬭鍐欎粈涔?
+  鉁?闈炴壙璇?鈫?"鑳戒笉鑳戒笉鍐欐墦鏂?
+
+鈹佲攣鈹?intent inheritance 鈹佲攣鈹?  鉁?鐭簲绛?鍡?缁ф壙鍓嶄竴鏉?write_chapter 鎰忓浘鐨?chapter 鍙?
+鈹佲攣鈹?new service exports (UI surfaces) 鈹佲攣鈹?  鉁?skills.readUserSkill / deleteUserSkill 瀵煎嚭
+  鉁?projects.deleteProject 瀵煎嚭涓旀湁璺緞瀹夊叏妫€鏌?  鉁?memory.listMemories / deleteMemory 瀵煎嚭
+  鉁?index.js 娉ㄥ唽 Batch1+2 鎵€鏈夋柊 API
+  鉁?鍓嶇闈㈡澘缁勪欢榻愬叏
+    缂哄皯鍓嶇缁勪欢锛歴rc/components/ChaptersDashboard.jsx
+  鉁?TopBar 宸叉寕 6 涓柊鎸夐挳 + SetupStageBadge
+    TopBar 缂哄皯 onOpenDashboard
+  鉁?SetupStageBadge 灞曠ず manifest 鍏ㄩ噺缂哄彛涓庝笅涓€闃舵
+  鉁?App.jsx 宸插０鏄?onExportNovel / onDeleteProject + 4 涓?panel state
+    App.jsx 缂哄皯澹版槑锛歝onst [dashboardOpen, setDashboardOpen]
+  鉁?Preview 宸叉帴 rollback + backup API
+
+鈹佲攣鈹?quality + memory + UX upgrades 鈹佲攣鈹?  鉁?銆怋4銆戜紡绗旈璀?helper + 娉ㄥ叆
+  鉁?銆怋1銆慶hapter-embed.js 瀛樺湪 + search_chapters/chapter_reindex 宸ュ叿
+  鉁?銆怋2銆憇tyle-fingerprint.js 瀛樺湪 + system prompt 娉ㄥ叆
+  鉁?銆怋3銆慶haracter_states 娉ㄥ叆
+  鉁?銆怉4銆憆eader-score.js 瀛樺湪 + reader_score 宸ュ叿 + 寮傛瑙﹀彂
+  鉁?銆怓1銆憆ecent_user_feedback 娉ㄥ叆
+  鉁?銆怉2銆慴eat-checker.js 瀛樺湪 + acceptance 闆嗘垚
+  鉁?銆怉1銆慶hapter-variants.js 瀛樺湪 + chapter_alternates 宸ュ叿
+  鉁?銆怐1銆慞review diff 瑙嗗浘
+  鉁?銆怳X銆慙iveActivity 瀹炴椂娲诲姩鏉″凡鎺ュ叆鑱婂ぉ鐣岄潰
+    缂?LiveActivity 鏍峰紡
+
+鈹佲攣鈹?prompt injection guard 鈹佲攣鈹?  鉁?read_file 杩斿洖鍐呭琚?<user_file> 鍖呰９
+  鉁?BASE_SYSTEM 鎻愬埌 <user_file> 瀹夊叏閾佸緥
+
+鈹佲攣鈹?agent execution runtime upgrades 鈹佲攣鈹?  鉁?prepare_write_chapter 宸ュ叿宸叉敞鍐?  鉁?detectRequiredWrites 鏀寔绔犺妭鑼冨洿闃熷垪
+  鉁?sortToolCallsForExecution 鎶婂墠缃彧璇诲伐鍏锋帓鍒板啓宸ュ叿鍓?  鉁?task-runtime 瑙勮寖鍖栧苟鑷姩鎺ㄨ繘褰撳墠浠诲姟
+  鉁?recovery-policy 鑳戒粠 skill_must_call_tools 鑷姩琛ュ墠缃伐鍏?  鉁?write-preflight 鍙娊鍙栦腑鏂囦汉鐗╁叧閿瘝
+  鉁?agent 涓诲惊鐜敮鎸佸彧璇诲伐鍏峰苟鍙戞墽琛?  鉁?agent 涓诲惊鐜敮鎸佸彧璇诲伐鍏?per-run 缂撳瓨
+  鉁?prepare_write_chapter 涓嶅簲鏃犳潯浠舵弧瓒?wiki/context gate
+  鉁?agent 姣忚疆 LLM 鍓嶆墽琛?runtime prompt 鍘嬬缉
+  鉁?scratchpad 浼氬弽鍚戞敞鍏?system prompt
+  鉁?agent-state 鏀寔缁х画鏃舵仮澶?requiredWrites
+  鉁?runTool 宸叉媶鎴?policy wrapper 涓?core 鍒嗘淳
+  鉁?宸ュ叿鎵ц鏀寔瓒呮椂淇濇姢
+  鉁?宸ュ叿绾ч€€閬垮彧閽堝鍙噸璇曞伐鍏烽敊璇?  鉁?gate 鑷姩娉ㄥ叆瀹夊叏鍓嶇疆宸ュ叿
+  鉁?鍐欏叆鎰忓浘鑰楀敖鍚庢敼涓鸿蒋鍋?ask_user 鑰岄潪 agent_giveup
+  鉁?soft-stop payload 鍚仮澶嶉€夐」涓庢渶鍚庡伐鍏?hint
+  鉁?agent-state 鏀寔闈炵户缁涔夋仮澶嶆彁绀?  鉁?TurnRunner 鍩虹杞蹇収鍙敤
+  鉁?鍐欏叆棰勮涓庡墠绔?UX 浜嬩欢宸叉帴鍏?    鍓嶇缂哄啓鍏ラ瑙堝崱
+  鉁?trace replay API 宸叉彁渚涙憳瑕佸洖鏀捐兘鍔?
+鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹?eval: 200/206 passed, 6 failed
+report: evals/runs/2026-05-10T18-53-06.json

@@ -1,0 +1,94 @@
+{
+  "at": "2026-05-05T11:12:35.336Z",
+  "stats": {
+    "total": 22,
+    "passed": 21,
+    "failed": 0
+  },
+  "results": [
+    {
+      "name": "TOOLS 非空且每条有 name/description/parameters",
+      "ok": true
+    },
+    {
+      "name": "工具名全局唯一",
+      "ok": true
+    },
+    {
+      "name": "required 字段的参数必须在 properties 中声明",
+      "ok": true
+    },
+    {
+      "name": "关键工具在 TOOLS 中存在",
+      "ok": true
+    },
+    {
+      "name": "inferOwnerTool 所有返回值都在 WRITE_RULES 里",
+      "ok": true
+    },
+    {
+      "name": "非法越界路径会被 resolveInProject 拒绝",
+      "ok": true
+    },
+    {
+      "name": "好样本比差样本得分高",
+      "ok": true
+    },
+    {
+      "name": "countWords 只计 CJK + 英文词",
+      "ok": true
+    },
+    {
+      "name": "AI 味样本触发 anti_ai 扣分",
+      "ok": true
+    },
+    {
+      "name": "parse/stringify 回环",
+      "ok": true
+    },
+    {
+      "name": "无 frontmatter 的文本 body 原样返回",
+      "ok": true
+    },
+    {
+      "name": "wrapToolResult 老 ok 格式 → status:ok",
+      "ok": true
+    },
+    {
+      "name": "wrapToolResult 原始对象 → status:ok wraps as data",
+      "ok": true
+    },
+    {
+      "name": "wrapToolResult 已是 envelope 直通",
+      "ok": true
+    },
+    {
+      "name": "wrapToolResult pending_user_reply → status:pending",
+      "ok": true
+    },
+    {
+      "name": "wrapToolError 有 kind + hint",
+      "ok": true
+    },
+    {
+      "name": "wrapToolBlocked 给出阻断结构",
+      "ok": true
+    },
+    {
+      "name": "skills/*.md 全部可读且有标题",
+      "ok": true
+    },
+    {
+      "name": "SKILL_CATALOG 里的 name 都对应 skills/<name>.md",
+      "ok": true
+    },
+    {
+      "name": "BASE_SYSTEM 大小在预算内（< 20k 字符）",
+      "ok": true
+    },
+    {
+      "name": "没有未使用的 TOOLS 描述占位符",
+      "ok": true
+    }
+  ]
+}

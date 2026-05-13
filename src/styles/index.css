@@ -1,0 +1,56 @@
+/* ============================================================ */
+/* styles/index.css · v5 模块化入口                              */
+/* ============================================================ */
+
+/* 顺序：tokens → base → 主骨架 → 组件 → 兼容补丁 */
+@import './tokens.css';
+@import './base.css';
+@import './layout.css';
+@import './topbar.css';
+@import './chat.css';
+@import './cards.css';
+@import './hud.css';
+@import './preview.css';
+@import './side-panel.css';
+
+/* ============================================================ */
+/* —— v5 兜底补丁：清理旧版残留与微调                            */
+/* ============================================================ */
+
+/* —— 字体角色化（v5 全局统一） —— */
+.bubble.assistant > .bubble-body,
+.bubble.user .bubble-body,
+.preview-content,
+.welcome-title {
+  font-family: var(--serif);
+  letter-spacing: 0.01em;
+}
+.tc-name, .hud-cost, .hud-row span, .stage-label,
+.cp-shortcut, .char-count, .chat-count, .tasks-progress {
+  font-variant-numeric: tabular-nums;
+}
+.tc-name { font-family: var(--mono); font-size: 12px; }
+
+/* —— 暗色补丁 —— */
+[data-theme="dark"] .hud.hud-inline { background: var(--surface-2); }
+[data-theme="dark"] .welcome-tip-btn { background: var(--surface-2); }
+[data-theme="dark"] .welcome-tip-btn:hover { background: var(--accent-faint); }
+[data-theme="dark"] .preview-pane { background: var(--surface-1); }
+[data-theme="dark"] .ft-toolbar { background: var(--surface-1); }
+[data-theme="dark"] .cp-panel { background: var(--surface-1); }
+[data-theme="dark"] .scroll-to-bottom { background: var(--surface-2); }
+[data-theme="dark"] .topbar { background: var(--surface-1); border-bottom-color: var(--line); }
+
+/* —— prefers-color-scheme 自动跟随（在没有手动主题时启用） —— */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]):not([data-theme="dark"]) {
+    color-scheme: dark;
+  }
+}
+
+/* —— 兼容旧 .chat-input 渐变线 —— */
+.chat .chat-input::before { display: none; }
+.chat-input.deprecated-bar { display: none !important; }
+
+/* —— 兼容旧 think-inline 引号装饰 —— */
+.bubble.assistant .think-inline::before { display: none; }
