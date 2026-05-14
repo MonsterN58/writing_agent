@@ -56,9 +56,9 @@ async function main() {
   const { getChapterContext, scoreChapterContent, countWords, analyzeTransitions, contextCutsForChapter, appendInjectionStats } = await import('../server/services/quality.js');
   const { inferOwnerTool } = await import('../server/services/edit-file.js');
   const { parseFrontmatter, stringifyFrontmatter } = await import('../server/services/frontmatter.js');
-  const { wrapToolResult, wrapToolError, wrapToolBlocked, isOk } = await import('../server/services/tool-envelope.js');
+  const { wrapToolResult, wrapToolError, wrapToolBlocked, wrapToolRecovered, isOk } = await import('../server/services/tool-envelope.js');
   const { validateArgs } = await import('../server/services/tool-validate.js');
-  const { llmConfig } = await import('../server/services/llm.js');
+  const { llmConfig, parseTextToolCalls } = await import('../server/services/llm.js');
   const {
     buildSkillRuntime,
     createRuntimeToolState,
@@ -591,6 +591,30 @@ async function main() {
     t('wrapToolBlocked 给出阻断结构', () => {
       const e = wrapToolBlocked({ tool: 'x', attempts: 2, maxRepeat: 2 });
       assert(e.status === 'blocked' && e.error.kind === 'retry_blocked');
+    });
+    t('wrapToolRecovered 给出中性补救结构', () => {
+      const e = wrapToolRecovered({
+        err: new Error('路径不匹配'),
+        kindHint: 'path_not_in_whitelist',
+        hintText: '改用对应写入工具',
+        via: 'write_outline',
+        note: '已自动补齐前置步骤',
+      });
+      assert(e.status === 'recovered', `应为 recovered，实得 ${e.status}`);
+      assert(e.recovery.kind === 'path_not_in_whitelist', `kind 错误：${e.recovery.kind}`);
+      assert(e.via === 'write_outline', `via 错误：${e.via}`);
+    });
+    t('parseTextToolCalls 兼容坏闭合的 wiki_ingest 文本调用', () => {
+      const src = '需要用正确的参数重新写入。<tool_call> <function=wiki_ingest> <parameter=chapter>1</parameter> <parameter=chapter_title>立项阶段-地点档案补建</parameter> <parameter=new_locations>[{"name":"青云城","type":"城市","aliases":[],"status":"active","description":"东荒域边陲小城"}]</parameter> </invoke>';
+      const out = parseTextToolCalls(src);
+      assert(out.content === '需要用正确的参数重新写入。', `残留文本错误：${out.content}`);
+      assert(out.tool_calls.length === 1, `应解析 1 个工具调用，实得 ${out.tool_calls.length}`);
+      const call = out.tool_calls[0];
+      const args = JSON.parse(call.function.arguments);
+      assert(call.function.name === 'wiki_ingest', `工具名错误：${call.function.name}`);
+      assert(args.chapter === 1, `chapter 错误：${args.chapter}`);
+      assert(args.chapter_title === '立项阶段-地点档案补建', `chapter_title 错误：${args.chapter_title}`);
+      assert(Array.isArray(args.new_locations) && args.new_locations[0]?.name === '青云城', `new_locations 错误：${JSON.stringify(args.new_locations)}`);
     });
   });
 
@@ -1938,10 +1962,23 @@ async function main() {
       assert(/file_write/.test(live), 'LiveActivity 未识别写文件状态');
       assert(/subagent_start/.test(live) && /subagent_done/.test(live), 'LiveActivity 未识别子 Agent 状态');
       assert(/agent_warmup/.test(live), 'LiveActivity 未识别启动状态');
+      assert(/function currentTurnEvents/.test(live) && /user_send/.test(live), 'LiveActivity 应只基于当前轮事件推导状态');
       assert(/import LiveActivity from '\.\/LiveActivity\.jsx'/.test(chat), 'ChatStream 未 import LiveActivity');
       assert(/<LiveActivity events=\{events\} busy=\{busy\}/.test(chat), 'ChatStream 未挂载 LiveActivity');
       assert(/events=\{events\}/.test(app), 'App.jsx 未把 events 传给 ChatStream');
       assert(/\.live-activity/.test(css) && /\.la-spinner/.test(css), '缺 LiveActivity 样式');
+    });
+    t('【UX】recovered 工具结果以中性状态展示', () => {
+      const toolCard = fs.readFileSync(path.join(ROOT, 'src/components/cards/ToolCard.jsx'), 'utf8');
+      const strip = fs.readFileSync(path.join(ROOT, 'src/components/ToolEventStrip.jsx'), 'utf8');
+      const trace = fs.readFileSync(path.join(ROOT, 'src/components/TraceDrawer.jsx'), 'utf8');
+      const agent = fs.readFileSync(path.join(ROOT, 'server/services/agent.js'), 'utf8');
+      assert(/status === 'recovered'/.test(toolCard), 'ToolCard 未识别 recovered');
+      assert(/已补救/.test(toolCard), 'ToolCard 未渲染 recovered 文案');
+      assert(/e\.status === 'recovered'/.test(strip), 'ToolEventStrip 未单独处理 recovered');
+      assert(/已补救/.test(strip), 'ToolEventStrip 未渲染 recovered 文案');
+      assert(/status === 'recovered' \? 'recovered'/.test(trace), 'TraceDrawer 未以中性摘要显示 recovered');
+      assert(/wrapToolRecovered/.test(agent) && /status: 'recovered'/.test(agent), 'agent 未发出 recovered 结果');
     });
   });
 
@@ -1989,6 +2026,28 @@ async function main() {
       const r = planRecovery({ toolName: 'write_chapter', args: { chapter: 1 }, err, classified: err });
       assert(r?.injectToolCall?.name === 'setup_status', `应自动补 setup_status，实得 ${JSON.stringify(r)}`);
     });
+    t('recovery-policy 能把错用 update_progress 的 outline 写入改道到 write_outline', () => {
+      const err = { kind: 'path_not_in_whitelist', message: '工具 update_progress 不允许写入路径 outline/overall.md' };
+      const r = planRecovery({ toolName: 'update_progress', args: { path: 'outline/overall.md', content: '# 总纲' }, err, classified: err });
+      assert(r?.injectToolCall?.name === 'write_outline', `应改道到 write_outline，实得 ${JSON.stringify(r)}`);
+      assert(r.injectToolCall.args.path === 'outline/overall.md', `path 错误：${JSON.stringify(r.injectToolCall.args)}`);
+    });
+    t('recovery-policy 能把章节文件路径改道到 write_chapter', () => {
+      const err = { kind: 'path_not_in_whitelist', message: '工具 write_outline 不允许写入路径 chapters/第3章-入宗.md' };
+      const r = planRecovery({ toolName: 'write_outline', args: { path: 'chapters/第3章-入宗.md', content: '正文内容' }, err, classified: err });
+      assert(r?.injectToolCall?.name === 'write_chapter', `应改道到 write_chapter，实得 ${JSON.stringify(r)}`);
+      assert(r.injectToolCall.args.chapter === 3 && r.injectToolCall.args.title === '入宗', `章节参数错误：${JSON.stringify(r.injectToolCall.args)}`);
+    });
+    t('recovery-policy 能把 knowledge/locations 页面改道到 wiki_ingest', () => {
+      const err = { kind: 'path_not_in_whitelist', message: '工具 update_progress 不允许写入路径 knowledge/locations/misty-mountains.md' };
+      const content = `---\nname: 迷雾山脉\naliases: [雾山]\nstatus: active\n---\n\n# 迷雾山脉\n\n常年被迷雾覆盖的山脉。`;
+      const r = planRecovery({ toolName: 'update_progress', args: { path: 'knowledge/locations/misty-mountains.md', content }, err, classified: err });
+      assert(r?.injectToolCall?.name === 'wiki_ingest', `应改道到 wiki_ingest，实得 ${JSON.stringify(r)}`);
+      const loc = r.injectToolCall.args.new_locations?.[0];
+      assert(loc?.slug === 'misty-mountains', `slug 错误：${JSON.stringify(loc)}`);
+      assert(loc?.name === '迷雾山脉', `name 错误：${JSON.stringify(loc)}`);
+      assert(Array.isArray(loc?.aliases) && loc.aliases[0] === '雾山', `aliases 错误：${JSON.stringify(loc)}`);
+    });
     t('write-preflight 可抽取中文人物关键词', () => {
       const ks = extractPreflightKeywords('林尘看见玄机子站在门外，张三也没说话。');
       assert(ks.includes('林尘') && ks.includes('玄机子'), `关键词抽取失败：${ks.join(',')}`);
@@ -2015,6 +2074,10 @@ async function main() {
       assert(/function compressRuntimeMessages/.test(agentSrc), '缺 compressRuntimeMessages');
       assert(/prompt_runtime_compressed/.test(agentSrc), '缺 runtime 压缩事件');
       assert(/messages\.splice\(0, messages\.length, \.\.\.runtimeCompression\.messages\)/.test(agentSrc), '应原地替换压缩后的 messages');
+    });
+    t('tool-only assistant 消息不应写 null content', () => {
+      const agentSrc = fs.readFileSync(path.join(ROOT, 'server/services/agent.js'), 'utf8');
+      assert(!/content:\s*content\s*\|\|\s*null/.test(agentSrc), 'tool-only assistant content 不应为 null，避免后续 null.length');
     });
     t('scratchpad 会反向注入 system prompt', () => {
       const agentSrc = fs.readFileSync(path.join(ROOT, 'server/services/agent.js'), 'utf8');

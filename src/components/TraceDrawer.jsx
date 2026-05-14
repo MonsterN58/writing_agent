@@ -133,7 +133,7 @@ function summarize(e) {
   switch (e.type) {
     case 'user_send': return String(e.text || '').slice(0, 80);
     case 'tool_call': return `${e.name} · ${abbrArgs(e.args)}`;
-    case 'tool_result': return `${e.name} · ${e.ok ? 'ok' : 'fail'}${e.status ? ` · ${e.status}` : ''}`;
+    case 'tool_result': return `${e.name} · ${e.status === 'recovered' ? 'recovered' : (e.ok ? 'ok' : 'fail')}${e.status ? ` · ${e.status}` : ''}`;
     case 'file_write': return e.relPath || e.path || '';
     case 'chapter_saved': return `第 ${e.chapter} 章 · ${e.title || ''} · ${e.wordCount || '?'}字`;
     case 'token_usage': return `P ${e.prompt} C ${e.completion} cached ${e.cached} (${e.hitRate}%)`;

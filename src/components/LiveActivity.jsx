@@ -44,12 +44,21 @@ function shortPath(p) {
   return rest.length > 50 ? '…' + rest.slice(-48) : rest;
 }
 
+function currentTurnEvents(events) {
+  if (!Array.isArray(events) || events.length === 0) return [];
+  for (let i = events.length - 1; i >= 0; i--) {
+    if (events[i]?.type === 'user_send') return events.slice(i + 1);
+  }
+  return events;
+}
+
 /**
  * 从事件流里提炼"当前在干什么"。返回 {phase, label, detail, icon, cls, sub}
  * 优先级：等用户 > 子 agent > 工具调用中 > 刚写文件 > 在思考 > 装配中 > 启动中 > 兜底
  */
 function deriveActivity(events, busy) {
-  if (!events || !events.length) {
+  const scoped = currentTurnEvents(events);
+  if (!scoped.length) {
     return busy ? { phase: 'warmup', label: '启动中', icon: 'spinner', cls: 'la-warm' } : null;
   }
 
@@ -58,8 +67,8 @@ function deriveActivity(events, busy) {
   const within = (e, ms) => e && e.time && (now - e.time) <= ms;
 
   // 1. 等待用户回应：awaiting_user 是终止态，busy 应该已 false，但保险起见
-  for (let i = events.length - 1; i >= 0; i--) {
-    const e = events[i];
+  for (let i = scoped.length - 1; i >= 0; i--) {
+    const e = scoped[i];
     if (e.type === 'done' || e.type === 'error' || e.type === 'agent_giveup') break;
     if (e.type === 'awaiting_user') {
       return { phase: 'awaiting', label: '等你回应', icon: 'ask', cls: 'la-ask' };
@@ -68,7 +77,7 @@ function deriveActivity(events, busy) {
 
   // 2. tool_call without matching tool_result（按 id 配对）
   const openTools = new Map(); // id -> tool_call event
-  for (const e of events) {
+  for (const e of scoped) {
     if (e.type === 'tool_call' && e.id) openTools.set(e.id, e);
     else if (e.type === 'tool_result' && e.id) openTools.delete(e.id);
   }
@@ -97,7 +106,7 @@ function deriveActivity(events, busy) {
 
   // 3. 子 agent 运行中
   const openSubs = new Map();
-  for (const e of events) {
+  for (const e of scoped) {
     if (e.type === 'subagent_start' && e.role) openSubs.set(e.role, e);
     else if (e.type === 'subagent_done' && e.role) openSubs.delete(e.role);
   }
@@ -113,8 +122,8 @@ function deriveActivity(events, busy) {
   }
 
   // 4. 刚写完文件（最近 1.5s 内）
-  for (let i = events.length - 1; i >= 0; i--) {
-    const e = events[i];
+  for (let i = scoped.length - 1; i >= 0; i--) {
+    const e = scoped[i];
     if (!within(e, 1500)) break;
     if (e.type === 'file_write') {
       const isChapter = e.kind === 'chapter';
@@ -139,7 +148,7 @@ function deriveActivity(events, busy) {
   // 5. 流式 token 中（最近 1.5s 内有 turn_start 但没 llm_done）
   let lastTurnStart = null;
   let lastLlmDone = null;
-  for (const e of events) {
+  for (const e of scoped) {
     if (e.type === 'turn_start') lastTurnStart = e;
     else if (e.type === 'llm_done') lastLlmDone = e;
   }
@@ -149,7 +158,7 @@ function deriveActivity(events, busy) {
 
   // 6. prompt 装配
   let lastPromptSize = null;
-  for (const e of events) if (e.type === 'prompt_size') lastPromptSize = e;
+  for (const e of scoped) if (e.type === 'prompt_size') lastPromptSize = e;
   if (lastPromptSize && within(lastPromptSize, 3000) && busy) {
     return {
       phase: 'prompt',
@@ -162,7 +171,7 @@ function deriveActivity(events, busy) {
 
   // 7. warmup（agent 入口刚发的事件）
   let lastWarmup = null;
-  for (const e of events) if (e.type === 'agent_warmup' || e.type === 'start') lastWarmup = e;
+  for (const e of scoped) if (e.type === 'agent_warmup' || e.type === 'start') lastWarmup = e;
   if (lastWarmup && within(lastWarmup, 5000) && busy) {
     return { phase: 'warmup', label: '启动中', icon: 'spinner', cls: 'la-warm' };
   }

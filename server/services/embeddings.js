@@ -12,15 +12,17 @@ import { getApiKey, getBaseURL, getEmbedModel, onConfigChange } from './llm-conf
 
 const INDEX_PATH = 'knowledge/.embeddings/index.json';
 
-let _client = null;
-onConfigChange(() => { _client = null; });
+const _clients = new Map();
+onConfigChange(() => { _clients.clear(); });
 function getEmbedClient() {
-  if (_client) return _client;
   const apiKey = getApiKey();
   const baseURL = getBaseURL();
   if (!apiKey || !baseURL) throw new Error('缺少 LLM_API_KEY / LLM_BASE_URL');
-  _client = new OpenAI({ apiKey, baseURL });
-  return _client;
+  const key = `${baseURL}\n${apiKey}`;
+  if (_clients.has(key)) return _clients.get(key);
+  const client = new OpenAI({ apiKey, baseURL });
+  _clients.set(key, client);
+  return client;
 }
 
 export function embedModel() {

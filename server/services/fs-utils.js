@@ -3,11 +3,16 @@ import path from 'node:path';
 import fs from 'node:fs';
 import fsp from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
+import { getCurrentUser } from './user-context.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export const ROOT = path.resolve(__dirname, '../..');
 export const NOVELS_ROOT = path.join(ROOT, 'novels');
 export const SKILLS_ROOT = path.join(ROOT, 'skills');
+
+export function getNovelsRoot() {
+  return getCurrentUser()?.novelsRoot || NOVELS_ROOT;
+}
 
 /** 标准化作品名为目录安全的形式 */
 export function safeName(name) {
@@ -18,7 +23,8 @@ export function safeName(name) {
 export function resolveInProject(projectName, relPath) {
   const proj = safeName(projectName);
   if (!proj) throw new Error('作品名为空');
-  const projDir = path.join(NOVELS_ROOT, proj);
+  const root = getNovelsRoot();
+  const projDir = path.join(root, proj);
   const target = path.resolve(projDir, relPath || '');
   if (!target.startsWith(projDir + path.sep) && target !== projDir) {
     throw new Error(`路径越界：${relPath}`);

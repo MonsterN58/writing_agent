@@ -53,7 +53,10 @@ function summarize(evt) {
     case 'skill_routed':  return `${evt.name}${evt.source === 'user' ? '（用户）' : ''}${evt.matchedOn?.length ? ` · ${evt.matchedOn.join(' / ')}` : ''}`;
     case 'skill_load':    return `${evt.name}${evt.title ? ` · ${evt.title}` : ''}`;
     case 'tool_call':     return evt.name;
-    case 'tool_result':   return `${evt.name} ${evt.ok ? '✓' : '✗'}`;
+    case 'tool_result':
+      return evt.status === 'recovered'
+        ? `${evt.name} ↺ 已补救`
+        : `${evt.name} ${evt.ok ? '✓' : '✗'}`;
     case 'file_write':    return `${evt.path}${evt.bytes ? ` (${evt.bytes} 字)` : ''}${evt.note ? ' · ' + evt.note : ''}`;
     case 'chapter_saved': return `第 ${evt.chapter} 章 · ${evt.title}${evt.wordCount ? ` · ${evt.wordCount}字` : ''}${evt.score ? ` · ${evt.score}分` : ''}`;
     case 'chapter_score': return `第 ${evt.chapter} 章 · ${evt.score?.total ?? '?'} 分`;
@@ -134,13 +137,15 @@ function summarizeStrip(events) {
   let chapters = 0;
   let asks = 0;
   let errors = 0;
+  let recovered = 0;
   let llmMs = 0;
   for (const e of events) {
     if (e.type === 'tool_call') tools.add(e.name);
     if (e.type === 'file_write') writes += 1;
     if (e.type === 'chapter_saved') chapters += 1;
     if (e.type === 'ask_user') asks += 1;
-    if (e.type === 'error' || (e.type === 'tool_result' && !e.ok) || e.type === 'agent_giveup') errors += 1;
+    if (e.type === 'tool_result' && e.status === 'recovered') recovered += 1;
+    else if (e.type === 'error' || (e.type === 'tool_result' && e.ok === false) || e.type === 'agent_giveup') errors += 1;
     if (e.type === 'llm_done' && e.ms) llmMs += e.ms;
   }
   const parts = [];
@@ -149,6 +154,7 @@ function summarizeStrip(events) {
   if (chapters) parts.push(`${chapters} 章落盘`);
   if (asks) parts.push(`${asks} 次求证`);
   if (errors) parts.push(`${errors} 个错误`);
+  if (recovered) parts.push(`${recovered} 次已补救`);
   if (llmMs) parts.push(`${(llmMs / 1000).toFixed(1)}s`);
   return parts.length ? parts.join(' · ') : `${events.length} 条事件`;
 }
@@ -171,7 +177,7 @@ export default function ToolEventStrip({ events }) {
   );
   if (visible.length === 0) return null;
   const summary = summarizeStrip(visible);
-  const hasError = visible.some((e) => e.type === 'error' || (e.type === 'tool_result' && !e.ok) || e.type === 'agent_giveup');
+  const hasError = visible.some((e) => e.type === 'error' || (e.type === 'tool_result' && e.ok === false) || e.type === 'agent_giveup');
   return (
     <div className={`tool-strip ${open ? 'open' : ''} ${hasError ? 'has-error' : ''}`}>
       <button className="tool-strip-chip" onClick={() => setOpen((o) => !o)}>

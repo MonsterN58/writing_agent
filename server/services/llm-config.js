@@ -8,6 +8,7 @@
 import fs from 'node:fs';
 import fsp from 'node:fs/promises';
 import path from 'node:path';
+import { getCurrentUser } from './user-context.js';
 
 const CONFIG_DIR = path.resolve(process.cwd(), 'data');
 const CONFIG_PATH = path.join(CONFIG_DIR, 'llm-config.json');
@@ -31,12 +32,15 @@ const ALLOWED_KEYS = new Set([
   'LLM_MAX_TOKENS_ULTRA',
 ]);
 
-let _cache = null;
 const _listeners = new Set();
+
+function getConfigPath() {
+  return getCurrentUser()?.configPath || CONFIG_PATH;
+}
 
 function readSync() {
   try {
-    const raw = fs.readFileSync(CONFIG_PATH, 'utf8');
+    const raw = fs.readFileSync(getConfigPath(), 'utf8');
     const obj = JSON.parse(raw);
     if (!obj || typeof obj !== 'object') return {};
     const out = {};
@@ -50,9 +54,7 @@ function readSync() {
 }
 
 function ensureLoaded() {
-  if (_cache) return _cache;
-  _cache = readSync();
-  return _cache;
+  return readSync();
 }
 
 export function getOverrides() {
@@ -83,9 +85,9 @@ export async function saveOverrides(patch) {
       cur[k] = String(v).trim();
     }
   }
-  await fsp.mkdir(CONFIG_DIR, { recursive: true });
-  await fsp.writeFile(CONFIG_PATH, JSON.stringify(cur, null, 2), 'utf8');
-  _cache = cur;
+  const configPath = getConfigPath();
+  await fsp.mkdir(path.dirname(configPath), { recursive: true });
+  await fsp.writeFile(configPath, JSON.stringify(cur, null, 2), 'utf8');
   notifyChange();
   return cur;
 }
@@ -172,7 +174,7 @@ export function getEffectiveConfig() {
     maxTokensUltra: getMaxTokens('ultra'),
     sources: Object.fromEntries([...ALLOWED_KEYS].map((k) => [k, source(k)])),
     overrideKeys: Object.keys(overrides),
-    configPath: path.relative(process.cwd(), CONFIG_PATH).replace(/\\/g, '/'),
+    configPath: path.relative(process.cwd(), getConfigPath()).replace(/\\/g, '/'),
   };
 }
 

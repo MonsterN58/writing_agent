@@ -21,42 +21,36 @@ const COLLAPSE_THRESHOLD = 6;
 // 6. 其它单项事件：file_write (非 chapter 配套)、review_alert、memory_saved…
 export default function TurnTimeline({ events, onOpenFile }) {
   const plan = useMemo(() => planTimeline(events || []), [events]);
-  const [expanded, setExpanded] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(false);
   if (!plan.items.length && !plan.intent && !plan.skills.routed.length && !plan.skills.loaded.length) return null;
 
-  // 折叠：长 timeline 默认只保留关键节点和最后 2 项；其余收进 chip
-  const shouldCollapse = !expanded && plan.items.length > COLLAPSE_THRESHOLD;
-  const minorCount = shouldCollapse
-    ? plan.items.filter((it, idx) => !KEY_KINDS.has(it.kind) && idx < plan.items.length - 2).length
-    : 0;
-  const visibleItems = shouldCollapse
-    ? plan.items.filter((it, idx) => KEY_KINDS.has(it.kind) || idx >= plan.items.length - 2)
-    : plan.items;
+  const visibleItems = detailsOpen ? plan.items : [];
   const toolCount = plan.items.filter((it) => it.kind === 'tool').length;
   const fileCount = plan.items.filter((it) => it.kind === 'file').length;
 
   return (
-    <div className="turn-timeline">
-      {(plan.intent || plan.skills.routed.length || plan.skills.loaded.length) > 0 && (
+    <div className={`turn-timeline ${detailsOpen ? 'tt-open' : 'tt-compact'}`}>
+      <CompactTurnSummary
+        plan={plan}
+        toolCount={toolCount}
+        fileCount={fileCount}
+        detailsOpen={detailsOpen}
+        onToggle={() => setDetailsOpen((v) => !v)}
+        onOpenFile={onOpenFile}
+      />
+      {detailsOpen && (plan.intent || plan.skills.routed.length || plan.skills.loaded.length) > 0 && (
         <div className="tt-head">
           {plan.intent && <IntentBadge intent={plan.intent.intent} risk={plan.intent.risk} contextMode={plan.intent.contextMode} />}
           <SkillsRow routed={plan.skills.routed} loaded={plan.skills.loaded} />
         </div>
       )}
-      {shouldCollapse && minorCount > 0 && (
-        <button className="tt-collapse-chip" onClick={() => setExpanded(true)} type="button">
-          <Icon name="chevronsDown" size={11} />
-          <span>已隐藏 <strong>{minorCount}</strong> 条过程事件{toolCount > 0 ? ` · ${toolCount} 次工具` : ''}{fileCount > 0 ? ` · ${fileCount} 次写入` : ''}</span>
-          <span>· 展开</span>
-        </button>
-      )}
-      {!shouldCollapse && plan.items.length > COLLAPSE_THRESHOLD && (
-        <button className="tt-collapse-chip" onClick={() => setExpanded(false)} type="button">
+      {detailsOpen && plan.items.length > COLLAPSE_THRESHOLD && (
+        <button className="tt-collapse-chip" onClick={() => setDetailsOpen(false)} type="button">
           <Icon name="chevronRight" size={11} />
-          <span>收起过程事件</span>
+          <span>收起过程细节</span>
         </button>
       )}
-      <div className="tt-list">
+      {detailsOpen && <div className="tt-list">
         {visibleItems.map((it, i) => {
           if (it.kind === 'tool') {
             return <ToolCard key={`t${i}`} call={it.call} result={it.result} onOpenFile={onOpenFile} />;
@@ -206,9 +200,178 @@ export default function TurnTimeline({ events, onOpenFile }) {
           }
           return null;
         })}
-      </div>
+      </div>}
     </div>
   );
+}
+
+function CompactTurnSummary({ plan, toolCount, fileCount, detailsOpen, onToggle, onOpenFile }) {
+  const summary = summarizePlan(plan, toolCount, fileCount);
+  const hasDetails = plan.items.length > 0 || plan.intent || plan.skills.routed.length || plan.skills.loaded.length;
+  if (!summary && !hasDetails) return null;
+  const statusCls = summary?.status || 'neutral';
+  return (
+    <div className={`tt-summary tt-summary-${statusCls}`}>
+      <Icon name={summary?.icon || 'tool'} size={13} className="tt-summary-ico" />
+      <div className="tt-summary-main">
+        <div className="tt-summary-line">
+          <strong>{summary?.title || '过程已折叠'}</strong>
+          {summary?.meta && <span>{summary.meta}</span>}
+        </div>
+        {summary?.detail && <div className="tt-summary-detail">{summary.detail}</div>}
+        {summary?.artifacts?.length > 0 && (
+          <div className="tt-summary-artifacts">
+            {summary.artifacts.slice(0, 4).map((a, i) => (
+              <button
+                key={`${a.path || a.label}-${i}`}
+                type="button"
+                className="tt-artifact-btn"
+                disabled={!a.path || !onOpenFile}
+                onClick={() => a.path && onOpenFile?.(a.path)}
+                title={a.path || a.label}
+              >
+                {a.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+      {hasDetails && (
+        <button type="button" className="tt-details-btn" onClick={onToggle}>
+          <Icon name={detailsOpen ? 'chevronDown' : 'chevronRight'} size={11} />
+          <span>{detailsOpen ? '隐藏细节' : `过程 ${plan.items.length || ''}`}</span>
+        </button>
+      )}
+    </div>
+  );
+}
+
+function summarizePlan(plan, toolCount, fileCount) {
+  const items = plan.items || [];
+  const final = [...items].reverse().find((it) => it.kind === 'final')?.evt;
+  const giveup = [...items].reverse().find((it) => it.kind === 'giveup')?.evt;
+  const error = [...items].reverse().find((it) => it.kind === 'error')?.evt;
+  const chapter = [...items].reverse().find((it) => it.kind === 'chapter');
+  const acceptance = [...items].reverse().find((it) => it.kind === 'acceptance')?.report;
+  const failedTool = [...items].reverse().find((it) => it.kind === 'tool' && it.result?.ok === false)?.result;
+  const artifacts = collectSummaryArtifacts(items, final);
+  const meta = [
+    toolCount ? `${toolCount} 个工具` : '',
+    fileCount ? `${fileCount} 个写入` : '',
+    plan.skills?.routed?.length ? `${plan.skills.routed.length} 个技能` : '',
+  ].filter(Boolean).join(' · ');
+
+  if (error || failedTool || final?.status === 'failed') {
+    const toolErr = failedTool?.result?.error;
+    return {
+      status: 'error',
+      icon: 'error',
+      title: final?.summary || '有一步需要处理',
+      meta,
+      detail: toolErr?.message || toolErr?.hint || error?.message || final?.issues?.[0] || '',
+      artifacts,
+    };
+  }
+
+  if (giveup || final?.status === 'awaiting_user') {
+    return {
+      status: 'wait',
+      icon: 'ask',
+      title: final?.summary || giveup?.summary || '已暂停，等待确认',
+      meta,
+      detail: giveup?.issue?.hint || final?.issues?.[0] || '',
+      artifacts,
+    };
+  }
+
+  if (chapter?.saved) {
+    const s = chapter.saved;
+    return {
+      status: 'ok',
+      icon: 'chapter',
+      title: `第 ${s.chapter} 章已落盘`,
+      meta: [s.wordCount ? `${s.wordCount} 字` : '', s.score ? `${s.score} 分` : '', meta].filter(Boolean).join(' · '),
+      detail: s.title || s.relPath || '',
+      artifacts,
+    };
+  }
+
+  if (acceptance) {
+    return {
+      status: acceptance.passed ? 'ok' : 'error',
+      icon: acceptance.passed ? 'done' : 'reviewAlert',
+      title: acceptance.passed ? '验收通过' : '验收未通过',
+      meta: acceptance.score != null ? `${acceptance.score} 分` : meta,
+      detail: (acceptance.blockers || []).slice(0, 2).join('；'),
+      artifacts,
+    };
+  }
+
+  if (final) {
+    return {
+      status: 'ok',
+      icon: 'done',
+      title: final.summary || '已完成',
+      meta,
+      detail: final.issues?.[0] || '',
+      artifacts,
+    };
+  }
+
+  if (artifacts.length) {
+    return {
+      status: 'ok',
+      icon: 'fileWrite',
+      title: `已写入 ${artifacts.length} 个产物`,
+      meta,
+      detail: artifacts[0]?.path || '',
+      artifacts,
+    };
+  }
+
+  if (toolCount || fileCount || plan.intent || plan.skills?.routed?.length) {
+    return {
+      status: 'neutral',
+      icon: 'tool',
+      title: '执行过程已折叠',
+      meta,
+      detail: '',
+      artifacts,
+    };
+  }
+
+  return null;
+}
+
+function collectSummaryArtifacts(items, final) {
+  const out = [];
+  const seen = new Set();
+  const add = (path, label) => {
+    const rel = normalizeArtifactPath(path);
+    const key = rel || label;
+    if (!key || seen.has(key)) return;
+    seen.add(key);
+    out.push({ path: rel, label: label || rel });
+  };
+  for (const a of final?.artifacts || []) add(a.path, a.label || a.path);
+  for (const it of items) {
+    if (it.kind === 'chapter') add(it.saved?.relPath, `第 ${it.saved?.chapter} 章`);
+    if (it.kind === 'file') add(it.evt?.relPath || it.evt?.path, shortArtifactLabel(it.evt?.relPath || it.evt?.path));
+  }
+  return out;
+}
+
+function normalizeArtifactPath(path) {
+  const p = String(path || '').replace(/\\/g, '/');
+  const m = /^novels\/[^/]+\/(.+)$/.exec(p);
+  return m ? m[1] : p;
+}
+
+function shortArtifactLabel(path) {
+  const rel = normalizeArtifactPath(path);
+  if (!rel) return '';
+  const parts = rel.split('/');
+  return parts.length > 2 ? `${parts[0]}/…/${parts.at(-1)}` : rel;
 }
 
 function planTimeline(events) {

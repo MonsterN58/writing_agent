@@ -61,7 +61,7 @@ function TasksPanel({ tasks }) {
   if (!tasks || !tasks.tasks?.length) return null;
   const pct = tasks.total ? (tasks.done / tasks.total * 100) : 0;
   return (
-    <details className="tasks-panel" open>
+    <details className="tasks-panel">
       <summary>
         <Icon name="tasks" size={14} className="tasks-ico" />
         <span className="tasks-title">任务清单</span>

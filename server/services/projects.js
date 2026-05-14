@@ -1,7 +1,7 @@
 // 作品管理
 import path from 'node:path';
 import fsp from 'node:fs/promises';
-import { NOVELS_ROOT, ensureDir, existsSync, readFileSafe, writeFileSafe, safeName, resolveInProject } from './fs-utils.js';
+import { getNovelsRoot, ensureDir, existsSync, readFileSafe, writeFileSafe, safeName, resolveInProject } from './fs-utils.js';
 
 const SUBDIRS = [
   'outline', 'outline/chapters', 'outline/arcs', 'outline/volumes', 'outline/versions',
@@ -28,13 +28,14 @@ export function isInternalProjectName(name) {
 }
 
 export async function listProjects({ includeInternal = false } = {}) {
-  await ensureDir(NOVELS_ROOT);
-  const entries = await fsp.readdir(NOVELS_ROOT, { withFileTypes: true });
+  const novelsRoot = getNovelsRoot();
+  await ensureDir(novelsRoot);
+  const entries = await fsp.readdir(novelsRoot, { withFileTypes: true });
   const result = [];
   for (const ent of entries) {
     if (!ent.isDirectory()) continue;
     if (!includeInternal && isInternalProjectName(ent.name)) continue;
-    const projDir = path.join(NOVELS_ROOT, ent.name);
+    const projDir = path.join(novelsRoot, ent.name);
     const metaPath = path.join(projDir, 'meta.json');
     let meta = { name: ent.name, createdAt: null, lastChapter: 0 };
     try {
@@ -50,7 +51,7 @@ export async function listProjects({ includeInternal = false } = {}) {
 export async function createProject(rawName) {
   const name = safeName(rawName);
   if (!name) throw new Error('作品名不能为空');
-  const projDir = path.join(NOVELS_ROOT, name);
+  const projDir = path.join(getNovelsRoot(), name);
   if (existsSync(projDir)) throw new Error(`作品已存在：${name}`);
   for (const sub of SUBDIRS) {
     await ensureDir(path.join(projDir, sub));
@@ -81,11 +82,12 @@ export async function writeSoul(projectName, content) {
 export async function deleteProject(rawName) {
   const name = safeName(rawName);
   if (!name) throw new Error('作品名不能为空');
-  const projDir = path.join(NOVELS_ROOT, name);
+  const novelsRoot = getNovelsRoot();
+  const projDir = path.join(novelsRoot, name);
   if (!existsSync(projDir)) throw new Error(`作品不存在：${name}`);
-  // 安全校验：目录必须在 NOVELS_ROOT 下
+  // 安全校验：目录必须在当前用户的 novels root 下
   const resolved = path.resolve(projDir);
-  const rootResolved = path.resolve(NOVELS_ROOT);
+  const rootResolved = path.resolve(novelsRoot);
   if (!resolved.startsWith(rootResolved + path.sep)) {
     throw new Error('路径非法，拒绝删除');
   }

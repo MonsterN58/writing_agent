@@ -1,4 +1,7 @@
 import path from 'node:path';
+import { inferOwnerTool } from './edit-file.js';
+import { parseChapterFile } from './chapter-utils.js';
+import { parseFrontmatter } from './frontmatter.js';
 
 export function planRecovery({ toolName, args = {}, err, classified } = {}) {
   const kind = err?.kind || classified?.kind || inferKind(err);
@@ -29,6 +32,8 @@ export function planRecovery({ toolName, args = {}, err, classified } = {}) {
   }
 
   if (kind === 'path_not_in_whitelist') {
+    const reroute = rerouteWriteTool({ toolName, args });
+    if (reroute) return reroute;
     return {
       kind,
       note: '写入工具与路径不匹配，需要换用 recovery_hint 建议的 owner tool',
@@ -75,4 +80,148 @@ function safeDirname(p) {
   if (!s || s.includes('..') || path.isAbsolute(s)) return '';
   const d = path.posix.dirname(s);
   return d === '.' ? '' : d;
+}
+
+function rerouteWriteTool({ toolName, args = {} }) {
+  const relPath = normalizeRelPath(args.path);
+  if (!relPath) return null;
+  const owner = inferOwnerTool(relPath);
+  if (!owner || owner === toolName) return null;
+
+  if (owner === 'setup_work' && typeof args.content === 'string') {
+    return inject('setup_work', { content: args.content }, `路径 ${relPath} 应由 setup_work 写入，自动改道`);
+  }
+
+  if (owner === 'write_outline' && typeof args.content === 'string') {
+    return inject('write_outline', { path: relPath, content: args.content }, `路径 ${relPath} 属于 outline，自动改道到 write_outline`);
+  }
+
+  if (owner === 'wiki_ingest' && typeof args.content === 'string' && (!args.mode || args.mode === 'overwrite')) {
+    const nextArgs = buildWikiIngestArgs(relPath, args.content, args);
+    if (nextArgs) return inject('wiki_ingest', nextArgs, `路径 ${relPath} 属于 wiki 页面，自动改道到 wiki_ingest`);
+  }
+
+  if (owner === 'update_progress' && typeof args.content === 'string') {
+    const nextArgs = { path: relPath, content: args.content };
+    if (typeof args.mode === 'string') nextArgs.mode = args.mode;
+    return inject('update_progress', nextArgs, `路径 ${relPath} 属于 progress/world/relations 资产，自动改道到 update_progress`);
+  }
+
+  if (owner === 'write_chapter' && typeof args.content === 'string') {
+    const parsed = parseChapterFromPath(relPath);
+    if (!parsed) return null;
+    return inject('write_chapter', { chapter: parsed.chapter, title: parsed.title, content: args.content }, `路径 ${relPath} 可解析为章节文件，自动改道到 write_chapter`);
+  }
+
+  return null;
+}
+
+function normalizeRelPath(p) {
+  const s = String(p || '').trim().replace(/\\/g, '/');
+  if (!s || s.includes('..') || path.isAbsolute(s)) return '';
+  return s;
+}
+
+function parseChapterFromPath(relPath) {
+  const base = path.posix.basename(relPath);
+  return parseChapterFile(base);
+}
+
+function buildWikiIngestArgs(relPath, content, args = {}) {
+  const kind = inferWikiKind(relPath);
+  if (!kind) return null;
+
+  const { data, body } = parseFrontmatter(content);
+  const slug = path.posix.basename(relPath, '.md');
+  const name = String(data.name || humanizeSlug(slug)).trim();
+  if (!name) return null;
+
+  const base = {};
+  const chapter = Number(args.chapter);
+  if (Number.isInteger(chapter) && chapter > 0) base.chapter = chapter;
+  if (typeof args.chapter_title === 'string' && args.chapter_title.trim()) base.chapter_title = args.chapter_title.trim();
+
+  if (kind === 'location') {
+    return {
+      ...base,
+      new_locations: [{
+        name,
+        slug,
+        body,
+        aliases: normalizeStringArray(data.aliases),
+        status: asNonEmptyString(data.status),
+      }],
+    };
+  }
+
+  if (kind === 'concept') {
+    return {
+      ...base,
+      new_concepts: [{
+        name,
+        slug,
+        body,
+        type: normalizeConceptType(data.type),
+      }],
+    };
+  }
+
+  if (kind === 'entity') {
+    const type = normalizeEntityType(data.type);
+    if (!type) return null;
+    return {
+      ...base,
+      new_entities: [{
+        name,
+        slug,
+        type,
+        body,
+        aliases: normalizeStringArray(data.aliases),
+        faction: asNonEmptyString(data.faction),
+        status: asNonEmptyString(data.status),
+        location: asNonEmptyString(data.location),
+        appearance: asNonEmptyString(data.appearance),
+        motivation: asNonEmptyString(data.motivation),
+        arc_goal: asNonEmptyString(data.arc_goal),
+        abilities: normalizeStringArray(data.abilities),
+        inventory: normalizeStringArray(data.inventory),
+      }],
+    };
+  }
+
+  return null;
+}
+
+function inferWikiKind(relPath) {
+  if (relPath.startsWith('knowledge/locations/')) return 'location';
+  if (relPath.startsWith('knowledge/concepts/')) return 'concept';
+  if (relPath.startsWith('knowledge/entities/')) return 'entity';
+  return null;
+}
+
+function humanizeSlug(slug) {
+  const text = String(slug || '').replace(/[-_]+/g, ' ').trim();
+  if (!text) return '';
+  return text.replace(/\b[a-z]/g, (ch) => ch.toUpperCase());
+}
+
+function normalizeEntityType(value) {
+  const t = String(value || '').trim().toLowerCase();
+  return ['character', 'item', 'faction'].includes(t) ? t : '';
+}
+
+function normalizeConceptType(value) {
+  const t = String(value || '').trim().toLowerCase();
+  return ['system', 'rule', 'concept'].includes(t) ? t : 'concept';
+}
+
+function normalizeStringArray(value) {
+  return Array.isArray(value)
+    ? value.map((x) => String(x || '').trim()).filter(Boolean)
+    : [];
+}
+
+function asNonEmptyString(value) {
+  const s = String(value || '').trim();
+  return s || undefined;
 }

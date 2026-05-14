@@ -73,6 +73,7 @@ const PATHS = {
   'trending-up': ['M22 7l-8.5 8.5-5-5L2 17', 'M16 7h6v6'],
   'shield': 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z',
   'sliders-horizontal': ['M21 6H8', 'M5 6H3', 'M21 12H12', 'M9 12H3', 'M21 18H16', 'M13 18H3', 'M6 4v4', 'M10 10v4', 'M14 16v4'],
+  'log-out': ['M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4', 'M16 17l5-5-5-5', 'M21 12H9'],
 };
 
 const ICON_MAP = {
@@ -153,6 +154,7 @@ const ICON_MAP = {
   question: 'help-circle',
   sparkles: 'sparkles',
   settings: 'sliders-horizontal',
+  logout: 'log-out',
 };
 
 export default function Icon({ name, size = 16, strokeWidth = 2, className = '', style, ...rest }) {

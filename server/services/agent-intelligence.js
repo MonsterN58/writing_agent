@@ -160,6 +160,45 @@ export function failureMemoryPayload({ ctx = {}, reason = '', events = [] } = {}
   };
 }
 
+export function buildFailureStats(events = []) {
+  const toolResults = (events || []).filter((e) => e.type === 'tool_result');
+  const byTool = {};
+  const byKind = {};
+  const byStatus = {};
+  for (const e of toolResults) {
+    if (e.ok === false) {
+      byTool[e.name] = (byTool[e.name] || 0) + 1;
+      const kind = e.result?.error?.kind || e.status || 'unknown';
+      byKind[kind] = (byKind[kind] || 0) + 1;
+      const status = e.status || 'error';
+      byStatus[status] = (byStatus[status] || 0) + 1;
+    }
+  }
+  return { totalFailures: toolResults.filter((e) => e.ok === false).length, byTool, byKind, byStatus };
+}
+
+export function buildFailureStatsMarkdown(stats = {}) {
+  const lines = ['# 失败统计', ''];
+  lines.push(`- 总失败数：${stats.totalFailures || 0}`);
+  lines.push(`- 按工具：${Object.entries(stats.byTool || {}).map(([k, v]) => `${k}=${v}`).join('，') || '无'}`);
+  lines.push(`- 按原因：${Object.entries(stats.byKind || {}).map(([k, v]) => `${k}=${v}`).join('，') || '无'}`);
+  lines.push(`- 按状态：${Object.entries(stats.byStatus || {}).map(([k, v]) => `${k}=${v}`).join('，') || '无'}`);
+  return lines.join('\n');
+}
+
+export function buildReflectionBundle({ ctx = {}, events = [], plan = null, judgment = null } = {}) {
+  const lastTool = [...events].reverse().find((e) => e.type === 'tool_result');
+  const stats = buildFailureStats(events);
+  return {
+    summary: judgment?.summary || '本轮已结束。',
+    plan: plan ? { intent: plan.intent, primaryTool: plan.primaryTool, steps: plan.steps } : null,
+    stats,
+    lastTool: lastTool ? { name: lastTool.name, ok: lastTool.ok, status: lastTool.status } : null,
+    next: judgment?.next_steps || [],
+    reflection: renderReflectionLine({ tool: lastTool?.name, label: judgment?.summary ? 'partial' : 'advanced', suggestion: judgment?.summary || '' }),
+  };
+}
+
 export function buildReplanPrompt(stuck = {}, ctx = {}) {
   return `[系统提醒｜自检重规划 · 非用户消息]\n检测到执行卡住：${stuck.reason}。请先调 plan_tasks 重排剩余步骤，随后只推进最小下一步。${ctx.requiredWrite ? `当前 requiredWrite=${ctx.requiredWrite.tool}，不要忘记最终完成它。` : ''}`;
 }

@@ -15,15 +15,23 @@ import CommandPalette from './components/CommandPalette.jsx';
 import Preview from './components/Preview.jsx';
 import ShortcutsHelp from './components/ShortcutsHelp.jsx';
 import StatusBar from './components/StatusBar.jsx';
+import LoginScreen from './components/LoginScreen.jsx';
 import { useToast } from './components/Toast.jsx';
 
-const LS_PROJECT = 'moshu.project';
 const LS_HISTORY_PREFIX = 'moshu.history.';
 const LS_EVENTS_PREFIX = 'moshu.events.';
-const historyKey = (p) => `${LS_HISTORY_PREFIX}${p || '_none'}`;
-const eventsKey = (p) => `${LS_EVENTS_PREFIX}${p || '_none'}`;
+const historyKey = (scope, p) => `${LS_HISTORY_PREFIX}${scope}.${p || '_none'}`;
+const eventsKey = (scope, p) => `${LS_EVENTS_PREFIX}${scope}.${p || '_none'}`;
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+function stripTransportToolMarkup(text = '') {
+  return String(text || '')
+    .replace(/<tool_call\s*>[\s\S]*?<\/tool_call>/gi, '')
+    .replace(/<invoke\s+name=["'][^"']+["']\s*>[\s\S]*?<\/invoke>/gi, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
 
 function isTransientChatError(err) {
   if (err?.name === 'AbortError') return false;
@@ -43,9 +51,9 @@ async function waitForBackend(signal) {
   return false;
 }
 
-function loadHistory(p) {
+function loadHistory(scope, p) {
   try {
-    const raw = localStorage.getItem(historyKey(p));
+    const raw = localStorage.getItem(historyKey(scope, p));
     if (!raw) return [];
     const arr = JSON.parse(raw);
     if (!Array.isArray(arr)) return [];
@@ -54,8 +62,8 @@ function loadHistory(p) {
     return arr.filter((m) => !(m && m.kind === 'system_warn' && /中断|主动停止|🛑/.test(String(m.content || ''))));
   } catch { return []; }
 }
-function saveHistory(p, arr) {
-  try { localStorage.setItem(historyKey(p), JSON.stringify(arr.slice(-200))); } catch {}
+function saveHistory(scope, p, arr) {
+  try { localStorage.setItem(historyKey(scope, p), JSON.stringify(arr.slice(-200))); } catch {}
 }
 
 // 事件持久化精简：去掉 token / reasoning，仅保留主线事件，单组最多 24 条
@@ -100,9 +108,9 @@ function compactEvents(events) {
   }
   return out.slice(-200);
 }
-function loadEvents(p) {
+function loadEvents(scope, p) {
   try {
-    const raw = localStorage.getItem(eventsKey(p));
+    const raw = localStorage.getItem(eventsKey(scope, p));
     if (!raw) return [];
     const arr = JSON.parse(raw);
     if (!Array.isArray(arr)) return [];
@@ -110,21 +118,23 @@ function loadEvents(p) {
     return arr.filter((e) => !(e && e.type === 'agent_giveup' && /中断/.test(String(e.reason || ''))));
   } catch { return []; }
 }
-function saveEvents(p, events) {
-  try { localStorage.setItem(eventsKey(p), JSON.stringify(compactEvents(events).slice(-600))); } catch {}
+function saveEvents(scope, p, events) {
+  try { localStorage.setItem(eventsKey(scope, p), JSON.stringify(compactEvents(events).slice(-600))); } catch {}
 }
 
-export default function App() {
+function Workspace({ user, onLogout }) {
   const toast = useToast();
+  const storageScope = user?.id || user?.username || 'user';
+  const projectStorageKey = `moshu.${storageScope}.project`;
   const [projects, setProjects] = useState([]);
-  const [project, setProject] = useState(() => localStorage.getItem(LS_PROJECT) || null);
+  const [project, setProject] = useState(() => localStorage.getItem(projectStorageKey) || null);
   const [files, setFiles] = useState([]);
   const [previewPath, setPreviewPath] = useState(null);
   const [previewContent, setPreviewContent] = useState('');
   const [previewOpen, setPreviewOpen] = useState(false);
   const [leftCollapsed, setLeftCollapsed] = useState(false);
-  const [events, setEvents] = useState(() => loadEvents(localStorage.getItem(LS_PROJECT)));
-  const [chatHistory, setChatHistory] = useState(() => loadHistory(localStorage.getItem(LS_PROJECT)));
+  const [events, setEvents] = useState(() => loadEvents(storageScope, localStorage.getItem(projectStorageKey)));
+  const [chatHistory, setChatHistory] = useState(() => loadHistory(storageScope, localStorage.getItem(projectStorageKey)));
   const [mode, setMode] = useState(() => {
     try { return localStorage.getItem('moshu.mode') || 'pro'; } catch { return 'pro'; }
   });
@@ -197,7 +207,7 @@ export default function App() {
       const r = await fetch(`/api/projects/${encodeURIComponent(name)}`, { method: 'DELETE' });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || 'delete failed');
-      try { localStorage.removeItem(historyKey(name)); localStorage.removeItem(eventsKey(name)); } catch {}
+      try { localStorage.removeItem(historyKey(storageScope, name)); localStorage.removeItem(eventsKey(storageScope, name)); } catch {}
       if (project === name) {
         setProject(null);
         setChatHistory([]);
@@ -205,7 +215,7 @@ export default function App() {
       }
       toast.info('已删除', `作品 "${name}" 已删除`);
     } catch (e) { toast.danger('删除失败', String(e.message || e)); }
-  }, [project, toast]);
+  }, [project, toast, storageScope]);
 
   const stopGenerating = useCallback(() => {
     if (abortRef.current) {
@@ -216,25 +226,25 @@ export default function App() {
 
   // project 变化时：持久化 + 切换到对应的历史
   useEffect(() => {
-    if (project) localStorage.setItem(LS_PROJECT, project);
-    setChatHistory(loadHistory(project));
-    setEvents(loadEvents(project));
+    if (project) localStorage.setItem(projectStorageKey, project);
+    setChatHistory(loadHistory(storageScope, project));
+    setEvents(loadEvents(storageScope, project));
     setAskUser(null);
     setTasks(null);
-  }, [project]);
+  }, [project, projectStorageKey, storageScope]);
 
   // chatHistory 变化时持久化（忽略 streaming 中的中间态，避免频繁写）
   useEffect(() => {
     const hasStreaming = chatHistory.some((m) => m.streaming);
     if (hasStreaming) return;
-    saveHistory(project, chatHistory);
-  }, [chatHistory, project]);
+    saveHistory(storageScope, project, chatHistory);
+  }, [chatHistory, project, storageScope]);
 
   // events 持久化（同样在非 busy 时写，避免频繁 stringify）
   useEffect(() => {
     if (busy) return;
-    saveEvents(project, events);
-  }, [events, project, busy]);
+    saveEvents(storageScope, project, events);
+  }, [events, project, busy, storageScope]);
 
   useEffect(() => {
     try { localStorage.setItem('moshu.mode', mode); } catch {}
@@ -437,10 +447,12 @@ export default function App() {
       setChatHistory((h) => {
         const cleaned = h.map((m) => {
           if (!m.streaming) return m;
+          const normalizedFromStream = stripTransportToolMarkup(assistantBuf);
+          const normalizedFallback = stripTransportToolMarkup(assistantBuf || finalSummaryMd || m.content || '');
           return {
             ...m,
             streaming: false,
-            content: assistantBuf || finalSummaryMd || m.content || '',
+            content: normalizedFromStream || normalizedFallback,
             reasoning: '',                  // 不再驻留中间态
             reasoningTurns: reasoningTurns.length ? reasoningTurns : (m.reasoningTurns || []),
           };
@@ -540,6 +552,8 @@ export default function App() {
         mode={mode}
         onModeChange={setMode}
         onOpenCmdK={() => setCmdkOpen(true)}
+        user={user}
+        onLogout={onLogout}
       />
       <div className={`main ${leftCollapsed ? 'left-collapsed' : ''} ${wideInlinePreview ? 'three-col' : ''}`}>
         <aside className="left">
@@ -599,7 +613,7 @@ export default function App() {
               setEvents([]);
               setAskUser(null);
               setTasks(null);
-              try { localStorage.removeItem(eventsKey(project)); } catch {}
+              try { localStorage.removeItem(eventsKey(storageScope, project)); } catch {}
             }}
           />
         </section>
@@ -697,4 +711,46 @@ export default function App() {
       />
     </div>
   );
+}
+
+export default function App() {
+  const [auth, setAuth] = useState({ loading: true, authenticated: false, setupRequired: false, user: null });
+
+  const loadSession = useCallback(async () => {
+    try {
+      const r = await fetch('/api/auth/session', { credentials: 'same-origin', cache: 'no-store' });
+      const d = await r.json();
+      setAuth({ loading: false, ...d });
+    } catch (e) {
+      setAuth({ loading: false, authenticated: false, setupRequired: false, user: null, error: String(e.message || e) });
+    }
+  }, []);
+
+  useEffect(() => { loadSession(); }, [loadSession]);
+
+  const handleAuthenticated = useCallback((user) => {
+    setAuth({ loading: false, authenticated: true, setupRequired: false, user });
+  }, []);
+
+  const handleLogout = useCallback(async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' });
+    } finally {
+      setAuth({ loading: false, authenticated: false, setupRequired: false, user: null });
+    }
+  }, []);
+
+  if (auth.loading) {
+    return (
+      <main className="auth-shell">
+        <div className="auth-panel auth-loading">正在检查登录状态...</div>
+      </main>
+    );
+  }
+
+  if (!auth.authenticated) {
+    return <LoginScreen setupRequired={auth.setupRequired} onAuthenticated={handleAuthenticated} />;
+  }
+
+  return <Workspace key={auth.user?.id || 'user'} user={auth.user} onLogout={handleLogout} />;
 }

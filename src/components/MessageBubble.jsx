@@ -18,6 +18,14 @@ function extractInlineThinking(text) {
   return { stripped, thinks };
 }
 
+function stripTransportToolMarkup(text) {
+  return String(text || '')
+    .replace(/<tool_call\s*>[\s\S]*?<\/tool_call>/gi, '')
+    .replace(/<invoke\s+name=["'][^"']+["']\s*>[\s\S]*?<\/invoke>/gi, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
 function CopyButton({ getText, className = 'bubble-act-btn', label = '复制', icon = 'copy', title = '复制' }) {
   const [copied, setCopied] = useState(false);
   const onClick = (e) => {
@@ -126,9 +134,10 @@ export default function MessageBubble({ msg, events, onOpenFile, onRetryFromInde
   const turns = Array.isArray(msg.reasoningTurns) ? msg.reasoningTurns : [];
   const live = msg.reasoning || '';
   const { stripped, thinks } = extractInlineThinking(msg.content || '');
+  const displayText = stripTransportToolMarkup(stripped);
   const allTurns = [...turns, ...thinks];
   const hasAnyThink = allTurns.length > 0 || live.trim().length > 0;
-  const showActions = !msg.streaming && (stripped?.trim()?.length || 0) > 0;
+  const showActions = !msg.streaming && displayText.length > 0;
 
   return (
     <div className={`bubble assistant ${msg.streaming ? 'streaming' : ''}`}>
@@ -138,7 +147,7 @@ export default function MessageBubble({ msg, events, onOpenFile, onRetryFromInde
           <span className="who-streaming">正在落笔</span>
         )}
       </div>
-      {hasAnyThink && (
+      {advanced && hasAnyThink && (
         <div className="bubble-thinks">
           {allTurns.map((t, i) => (
             <ThinkBlock key={`r${i}`} text={t} label={allTurns.length > 1 ? `思考 · 第 ${i + 1} 段` : '思考'} />
@@ -156,12 +165,12 @@ export default function MessageBubble({ msg, events, onOpenFile, onRetryFromInde
         <TurnTimeline events={events} onOpenFile={onOpenFile} />
       )}
       <div className="bubble-body">
-        <MessageMarkdown text={stripped} />
+        <MessageMarkdown text={displayText} />
         {msg.streaming && <span className="caret" aria-hidden="true" />}
       </div>
       {showActions && (
         <div className="bubble-actions">
-          <CopyButton getText={() => stripped || ''} label="复制" />
+          <CopyButton getText={() => displayText} label="复制" />
           {onRetryFromIndex && (
             <button
               type="button"
@@ -172,17 +181,17 @@ export default function MessageBubble({ msg, events, onOpenFile, onRetryFromInde
               <Icon name="refresh" size={11} /> <span className="label">重试</span>
             </button>
           )}
-          {events && events.length > 0 && (
+          {(events && events.length > 0) || hasAnyThink ? (
             <button
               type="button"
               className="bubble-act-btn"
               onClick={toggleAdvanced}
-              title={advanced ? '隐藏原始事件' : '显示原始事件（开发者视图）'}
+              title={advanced ? '隐藏开发者视图' : '显示思考与原始事件'}
             >
               <Icon name={advanced ? 'chevronDown' : 'chevronRight'} size={10} />
-              <span className="label">原始事件 · {events.length}</span>
+              <span className="label">开发者视图{events?.length ? ` · ${events.length}` : ''}</span>
             </button>
-          )}
+          ) : null}
         </div>
       )}
       {advanced && events && events.length > 0 && (

@@ -4,6 +4,7 @@
 //   { status: 'ok',      data: any,                     side_effects?: [...] }
 //   { status: 'error',   error: { kind, message, hint, context? }, attempt, max_repeat, auto_repaired?, via?: string }
 //   { status: 'pending', data: any }                // ask_user 分支
+//   { status: 'recovered', recovery: { kind, message, hint, context? }, via?: string, note?: string }
 //   { status: 'blocked', error: { kind, message, hint } } // 重试预算阻断
 //
 // 兼容老 runTool case：它们可能返回 { ok:true, ... } / { error, recovery_hint } / 纯对象。
@@ -24,7 +25,7 @@ export function wrapToolResult(raw) {
     return { status: 'ok', data: raw ?? null };
   }
   // 已经是 envelope
-  if (raw.status === 'ok' || raw.status === 'error' || raw.status === 'pending' || raw.status === 'blocked') {
+  if (raw.status === 'ok' || raw.status === 'error' || raw.status === 'pending' || raw.status === 'recovered' || raw.status === 'blocked') {
     return raw;
   }
   // ask_user 分支：老代码返回 { pending_user_reply:true, ... }
@@ -77,6 +78,22 @@ export function wrapToolBlocked({ tool, attempts, maxRepeat }) {
     },
     attempts,
     max_repeat: maxRepeat,
+  };
+}
+
+export function wrapToolRecovered({ err, kindHint, hintText, via, note, recoveryHint }) {
+  const kind = err?.kind || kindHint || recoveryHint?.kind || 'unknown';
+  const hint = err?.hint || hintText || recoveryHint?.hint || '';
+  return {
+    status: 'recovered',
+    recovery: {
+      kind,
+      message: String(err?.message || err),
+      hint,
+      context: err?.context,
+    },
+    via,
+    note,
   };
 }
 

@@ -18,18 +18,22 @@ import { buildSetupRepairPlan, createSetupStubs } from './services/setup-repair.
 import { importTextFile, uploadUserSkill } from './services/upload.js';
 import { getEffectiveConfig, saveOverrides, patchFromCamel } from './services/llm-config.js';
 import { pingLLM } from './services/llm.js';
+import { attachAuthRoutes, requireAuth, getAuthStorageInfo } from './services/auth.js';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: '4mb' }));
+attachAuthRoutes(app);
+app.use('/api', requireAuth);
 
 // 健康检查
 app.get('/api/health', (req, res) => {
   const cfg = getEffectiveConfig();
   res.json({
     ok: true,
+    auth: getAuthStorageInfo(),
     hasKey: cfg.hasKey,
     baseUrl: cfg.baseUrl || null,
     model: cfg.model || null,

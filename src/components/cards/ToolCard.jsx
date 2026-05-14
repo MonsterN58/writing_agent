@@ -64,6 +64,7 @@ function summarize(name, args) {
 function statusIcon(status, ok) {
   if (status === 'blocked') return { icon: 'error', cls: 'tc-blocked' };
   if (status === 'pending') return { icon: 'ask', cls: 'tc-pending' };
+  if (status === 'recovered') return { icon: 'refresh', cls: 'tc-pending' };
   if (ok === true || status === 'ok') return { icon: 'done', cls: 'tc-ok' };
   if (ok === false || status === 'error') return { icon: 'error', cls: 'tc-err' };
   return { icon: 'clock', cls: 'tc-running' };
@@ -81,6 +82,16 @@ function resultPreview(result, name) {
   }
   if (env && env.status === 'pending') {
     return { kind: 'pending', data };
+  }
+  if (env && env.status === 'recovered') {
+    return {
+      kind: 'recovered',
+      message: env.recovery?.message,
+      hint: env.recovery?.hint,
+      recoverKind: env.recovery?.kind,
+      via: env.via,
+      note: env.note,
+    };
   }
   // 成功或老格式 —— 挑一些可读字段
   if (data == null) return null;
@@ -148,15 +159,18 @@ export default function ToolCard({ call, result, onOpenFile }) {
         <span className="tc-spacer" />
         {preview?.kind === 'summary' && <span className="tc-hint">{preview.text}</span>}
         {preview?.kind === 'error' && <span className="tc-hint tc-hint-err">{preview.errKind || 'error'}</span>}
+        {preview?.kind === 'recovered' && <span className="tc-hint">{preview.recoverKind || 'recovered'}</span>}
         {preview?.kind === 'blocked' && <span className="tc-hint tc-hint-err">blocked</span>}
         <Icon name={st.icon} size={12} className={`tc-status-ico ${st.cls}`} />
         <Icon name={open ? 'chevronDown' : 'chevronRight'} size={11} className="tc-fold" />
       </div>
-      {(preview?.kind === 'error' || preview?.kind === 'blocked') && (preview.message || preview.hint) && (
-        <div className="tc-inline-error">
-          <strong>{preview.kind === 'blocked' ? '已阻断' : '错误'}：</strong>{preview.message}
+      {(preview?.kind === 'error' || preview?.kind === 'blocked' || preview?.kind === 'recovered') && (preview.message || preview.hint || preview.note) && (
+        <div className={`tc-inline-${preview.kind === 'recovered' ? 'recovered' : 'error'}`}>
+          <strong>{preview.kind === 'blocked' ? '已阻断' : preview.kind === 'recovered' ? '已补救' : '错误'}：</strong>{preview.message}
           {preview.hint && <span>建议：{preview.hint}</span>}
-          <CopyErrButton text={`${name || ''} ${preview.kind === 'blocked' ? '阻断' : '错误'}: ${preview.message || ''}${preview.hint ? '\nhint: ' + preview.hint : ''}`} />
+          {preview.via && <span>通过：{preview.via}</span>}
+          {preview.note && <span>说明：{preview.note}</span>}
+          <CopyErrButton text={`${name || ''} ${preview.kind === 'blocked' ? '阻断' : preview.kind === 'recovered' ? '已补救' : '错误'}: ${preview.message || ''}${preview.hint ? '\nhint: ' + preview.hint : ''}${preview.via ? '\nvia: ' + preview.via : ''}${preview.note ? '\nnote: ' + preview.note : ''}`} />
         </div>
       )}
       {open && (
@@ -178,6 +192,14 @@ export default function ToolCard({ call, result, onOpenFile }) {
               {preview.kind === 'blocked' && (
                 <>
                   <div className="tc-result-line"><strong>阻断：</strong> {preview.message}</div>
+                  {preview.hint && <div className="tc-result-hint">{preview.hint}</div>}
+                </>
+              )}
+              {preview.kind === 'recovered' && (
+                <>
+                  <div className="tc-result-line"><strong>已补救：</strong> {preview.message}</div>
+                  {preview.via && <div className="tc-result-line">已自动执行：{preview.via}</div>}
+                  {preview.note && <div className="tc-result-hint">{preview.note}</div>}
                   {preview.hint && <div className="tc-result-hint">{preview.hint}</div>}
                 </>
               )}

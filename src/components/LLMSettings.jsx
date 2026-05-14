@@ -59,7 +59,7 @@ export default function LLMSettings({ open, onClose }) {
   const refresh = useCallback(async () => {
     setLoading(true); setErr('');
     try {
-      const r = await fetch('/api/llm-config');
+      const r = await fetch('/api/llm-config', { credentials: 'same-origin' });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || 'load failed');
       setCfg(d);
@@ -109,6 +109,7 @@ export default function LLMSettings({ open, onClose }) {
       const r = await fetch('/api/llm-config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
         body: JSON.stringify(payload),
       });
       const d = await r.json();
@@ -129,6 +130,7 @@ export default function LLMSettings({ open, onClose }) {
       const r = await fetch('/api/llm-config/test', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
         body: JSON.stringify({ profile }),
       });
       const d = await r.json();
@@ -149,6 +151,7 @@ export default function LLMSettings({ open, onClose }) {
       const r = await fetch('/api/llm-config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
         body: JSON.stringify(payload),
       });
       const d = await r.json();

@@ -44,6 +44,8 @@ export default function TopBar({
   onExport, onDeleteProject,
   mode = 'pro', onModeChange,
   onOpenCmdK,
+  user,
+  onLogout,
   hudSlot = null,
 }) {
   const [creating, setCreating] = useState(false);
@@ -183,6 +185,13 @@ export default function TopBar({
               {onOpenForeshadow && menuItem('warn', '伏笔预警', onOpenForeshadow, { disabled: !project })}
               <div className="tb-more-sep" />
               {onOpenLLMSettings && menuItem('settings', 'LLM 配置', onOpenLLMSettings)}
+              {user && (
+                <button type="button" className="tb-more-item" disabled>
+                  <Icon name="user" size={13} />
+                  <span>{user.username}</span>
+                </button>
+              )}
+              {onLogout && menuItem('logout', '退出登录', onLogout)}
               <div className="tb-more-sep" />
               {menuItem('download', exporting ? '导出中…' : '导出全本', handleExport, { disabled: !project || exporting })}
               {menuItem('trash', '删除当前作品', handleDelete, { disabled: !project, danger: true })}

@@ -7,6 +7,7 @@ const WRITE_EVENT_TYPES = new Set([
   'memory_saved',
   'feedback_saved',
   'edit_file',
+  'reflection_saved',
 ]);
 
 function stripProjectPrefix(path, projectName) {
@@ -46,6 +47,9 @@ function artifactFromEvent(e, projectName) {
   if (e.type === 'edit_file') {
     if (e.status === 'error') return null;
     return { kind: 'edit', path: stripProjectPrefix(e.path, projectName), label: `定点修改 · ${stripProjectPrefix(e.path, projectName)}`, note: e.bytesDelta != null ? `Δ${e.bytesDelta >= 0 ? '+' : ''}${e.bytesDelta}` : '' };
+  }
+  if (e.type === 'reflection_saved') {
+    return { kind: 'reflection', path: stripProjectPrefix(e.path, projectName), label: '任务反思', note: e.reason || '' };
   }
   const path = stripProjectPrefix(e.relPath || e.path, projectName);
   if (!path) return null;

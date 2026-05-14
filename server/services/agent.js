@@ -16,7 +16,7 @@ import {
 } from './skills.js';
 import {
   resolveInProject, readFileSafe, writeFileSafe,
-  listDirRecursive, NOVELS_ROOT, ensureDir, assertWriteAllowed,
+  listDirRecursive, ensureDir, assertWriteAllowed,
 } from './fs-utils.js';
 import { listProjects, createProject, readSoul, writeSoul } from './projects.js';
 import { writeChapterFile, writeOutlineFile, listChapters } from './chapter-utils.js';
@@ -38,6 +38,8 @@ import {
   appendFeedback,
   appendInjectionStats,
 } from './quality.js';
+import { buildStructuredContext, renderStructuredContextMarkdown } from './context-model.js';
+import { buildExecutionPlan, renderExecutionPlanMarkdown } from './planning.js';
 import {
   recordMemory,
   loadActiveMemoriesMd,
@@ -51,7 +53,7 @@ import { acceptChapter } from './acceptance.js';
 import { tryAutoRepair } from './auto-repair.js';
 import { appendExemplar, polarityFromKind } from './exemplars.js';
 import { editFile } from './edit-file.js';
-import { wrapToolResult, wrapToolError, wrapToolBlocked, isOk, ToolError } from './tool-envelope.js';
+import { wrapToolResult, wrapToolError, wrapToolBlocked, wrapToolRecovered, isOk, ToolError } from './tool-envelope.js';
 import { validateArgs } from './tool-validate.js';
 import { lookupQuery, lookupUpsert, lookupRemove, lookupList, lookupRebuild } from './lookup.js';
 import { conflictCheck } from './conflict.js';
@@ -99,10 +101,58 @@ import {
 import { buildSoftStopPayload, renderResumeHint, shouldOfferAgentResume } from './soft-stop.js';
 import { TurnRunner, turnRunnerSnapshot } from './turn-runner.js';
 import { chapterWritePreview, editFilePreview } from './write-preview.js';
+import { buildReflectionMd, saveReflection } from './reflection.js';
 
 function findToolSchema(name) {
   const t = TOOLS.find((x) => x.function?.name === name);
   return t?.function?.parameters || null;
+}
+
+function toolByName(names) {
+  const wanted = new Set(names);
+  return TOOLS.filter((tool) => wanted.has(tool.function?.name));
+}
+
+function activeToolsForContext(ctx) {
+  const base = [
+    'list_projects',
+    'create_project',
+    'switch_project',
+    'read_soul',
+    'list_files',
+    'read_file',
+    'read_skill_section',
+    'ask_user',
+    'finish_task',
+    'plan_tasks',
+  ];
+  if (ctx.forceNextTool) return toolByName([...base, ctx.forceNextTool]);
+  if (ctx.requiredWrite?.tool === 'setup_work' || ctx.intentInfo?.intent === 'setup' || ctx.intentInfo?.intent === 'setup_continue') {
+    return toolByName([...base, 'setup_work', 'setup_status', 'setup_repair']);
+  }
+  if (ctx.requiredWrite?.tool === 'write_outline' || ctx.intentInfo?.intent === 'write_outline') {
+    return toolByName([...base, 'setup_status', 'write_outline', 'wiki_query', 'lookup_query', 'backup_file']);
+  }
+  if (ctx.requiredWrite?.tool === 'write_chapter' || ctx.intentInfo?.intent === 'write_chapter') {
+    return toolByName([
+      ...base,
+      'setup_status',
+      'setup_repair',
+      'list_chapters',
+      'prepare_write_chapter',
+      'get_chapter_context',
+      'wiki_query',
+      'lookup_query',
+      'search_chapters',
+      'chapter_critic',
+      'write_chapter',
+      'wiki_ingest',
+      'consistency_scan',
+      'chapter_score',
+      'record_feedback',
+    ]);
+  }
+  return TOOLS;
 }
 
 export function normalizeModeProfile(mode) {
@@ -495,11 +545,11 @@ export const TOOLS = [
     type: 'function',
     function: {
       name: 'wiki_ingest',
-      description: '章节写完后沉淀知识：抽取新实体/概念/地点 + 摘要 + 伏笔变动到 knowledge/。建议在 write_chapter 之后立即调用。',
+      description: '章节写完后沉淀知识：抽取新实体/概念/地点 + 摘要 + 伏笔变动到 knowledge/。建议在 write_chapter 之后立即调用；立项/导入设定期可传 chapter=0，只写 wiki 不追加章节摘要。',
       parameters: {
         type: 'object',
         properties: {
-          chapter: { type: 'integer', minimum: 1 },
+          chapter: { type: 'integer', minimum: 0, description: '章节号。写章后的沉淀传实际章号；立项/导入设定期可传 0。' },
           chapter_title: { type: 'string' },
           summary: { type: 'string', description: '章节摘要 80-150 字' },
           new_entities: {
@@ -1032,6 +1082,22 @@ export const TOOLS = [
           next_steps: { type: 'array', items: { type: 'string' }, description: '建议用户下一步可选动作' },
         },
         required: ['summary'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'quality_judge',
+      description: '统一质量裁决器：汇总 critic、评分、一致性与读者反馈，输出本轮是否可交付/是否需修稿。',
+      parameters: {
+        type: 'object',
+        properties: {
+          chapter: { type: 'integer', minimum: 1 },
+          title: { type: 'string' },
+          content: { type: 'string', description: '可选，用于重算裁决' },
+        },
+        required: ['chapter'],
       },
     },
   },
@@ -1724,6 +1790,29 @@ async function runToolCore({ name, args, ctx, emit }) {
       emit({ type: 'final_summary', ...summary });
       return { ok: true, ...summary };
     }
+    case 'quality_judge': {
+      if (!projectName) throw new Error('未激活作品');
+      const { judgeQuality } = await import('./judgment.js');
+      const chapter = Number(args.chapter);
+      const judge = await judgeQuality({
+        projectName,
+        chapter,
+        title: args.title,
+        content: args.content || '',
+        context: buildCanonContextFromState(ctx, chapter),
+        signal: ctx.signal,
+        emit,
+        critic: ctx.toolState?.lastAcceptance?.critic ? {
+          ...ctx.toolState.lastAcceptance.critic,
+          score: ctx.toolState.lastAcceptance.score,
+        } : null,
+        consistency: ctx.toolState?.lastConsistency || null,
+        readerScore: ctx.toolState?.lastReaderScore || null,
+      });
+      ctx.toolState.lastJudgment = judge;
+      emit({ type: 'quality_judged', chapter, decision: judge.decision, score: judge.score, blockers: judge.blockers.length, advisories: judge.advisories.length });
+      return judge;
+    }
     // ===== 元工具 =====
     case 'plan_tasks': {
       if (!projectName) throw new Error('未激活作品，无法落盘任务清单');
@@ -1815,6 +1904,182 @@ function sleep(ms, signal) {
 }
 
 // ============== 错误分类 + 恢复建议 ==============
+function normalizeToolArgs(toolName, args = {}) {
+  if (!args || typeof args !== 'object' || Array.isArray(args)) return {};
+  if (toolName === 'plan_tasks') return normalizePlanTaskArgs(args);
+  if (toolName === 'update_progress') return normalizeProgressArgs(args);
+  if (toolName === 'wiki_ingest') return normalizeWikiIngestArgs(args);
+  return args;
+}
+
+function normalizePlanTaskArgs(args = {}) {
+  const rawTasks = Array.isArray(args.tasks)
+    ? args.tasks
+    : (Array.isArray(args.todos) ? args.todos : (Array.isArray(args.plan) ? args.plan : []));
+  return {
+    ...args,
+    tasks: rawTasks.map((raw, i) => {
+      const task = raw && typeof raw === 'object' ? raw : { title: raw };
+      return {
+        ...task,
+        id: String(task.id || task.key || `t${i + 1}`),
+        title: String(task.title || task.task || task.name || task.step || task.description || task.content || `任务 ${i + 1}`),
+        status: normalizeTaskStatus(task.status || task.state),
+      };
+    }),
+  };
+}
+
+function normalizeTaskStatus(value) {
+  const s = String(value || '').trim().toLowerCase();
+  if (['pending', 'in_progress', 'done', 'skipped'].includes(s)) return s;
+  if (/进行|doing|current|active/.test(s)) return 'in_progress';
+  if (/完成|done|complete|finished/.test(s)) return 'done';
+  if (/跳过|skip/.test(s)) return 'skipped';
+  return 'pending';
+}
+
+function normalizeProgressArgs(args = {}) {
+  const out = { ...args };
+  out.path = out.path || out.file || out.relPath || out.target;
+  if (out.content == null) out.content = out.markdown ?? out.body ?? out.text ?? out.value;
+  if (out.content != null && typeof out.content !== 'string') out.content = JSON.stringify(out.content, null, 2);
+  return out;
+}
+
+function normalizeWikiIngestArgs(args = {}) {
+  const out = { ...args };
+  out.chapter = normalizeNonNegativeInteger(out.chapter);
+  out.new_entities = normalizeEntityItems(out.new_entities);
+  out.new_concepts = normalizeConceptItems(out.new_concepts);
+  out.new_locations = normalizeLocationItems(out.new_locations);
+  out.updated_entities = normalizeUpdatedEntities(out.updated_entities);
+  out.foreshadow_open = normalizeForeshadowItems(out.foreshadow_open);
+  out.foreshadow_closed = normalizeForeshadowItems(out.foreshadow_closed);
+  out.timeline_events = normalizeTimelineEvents(out.timeline_events);
+  return out;
+}
+
+function normalizeNonNegativeInteger(value) {
+  const n = Number(value);
+  if (Number.isInteger(n) && n >= 0) return n;
+  return value;
+}
+
+function normalizeEntityItems(items) {
+  if (!Array.isArray(items)) return items;
+  return items
+    .map((raw) => {
+      if (!raw || typeof raw !== 'object') return null;
+      const item = { ...raw };
+      item.type = normalizeEntityTypeForTool(item.type || item.kind || item.role);
+      item.name = item.name || item.title;
+      item.aliases = normalizeStringList(item.aliases);
+      item.abilities = normalizeStringList(item.abilities);
+      item.inventory = normalizeStringList(item.inventory);
+      item.relationships = normalizeRelationships(item.relationships);
+      return item.name ? item : null;
+    })
+    .filter(Boolean);
+}
+
+function normalizeConceptItems(items) {
+  if (!Array.isArray(items)) return items;
+  return items
+    .map((raw) => {
+      if (!raw || typeof raw !== 'object') return null;
+      const item = { ...raw };
+      item.type = normalizeConceptTypeForTool(item.type || item.kind);
+      item.name = item.name || item.title;
+      return item.name ? item : null;
+    })
+    .filter(Boolean);
+}
+
+function normalizeLocationItems(items) {
+  if (!Array.isArray(items)) return items;
+  return items
+    .map((raw) => {
+      if (!raw || typeof raw !== 'object') return null;
+      const item = { ...raw };
+      item.name = item.name || item.title;
+      return item.name ? item : null;
+    })
+    .filter(Boolean);
+}
+
+function normalizeUpdatedEntities(items) {
+  if (!Array.isArray(items)) return items;
+  return items
+    .map((raw) => {
+      if (!raw || typeof raw !== 'object') return null;
+      const slug = raw.slug || raw.id || raw.entity || raw.name;
+      const patch = raw.patch && typeof raw.patch === 'object'
+        ? raw.patch
+        : Object.fromEntries(Object.entries(raw).filter(([k, v]) => !['slug', 'id', 'entity', 'name'].includes(k) && v != null));
+      return slug && Object.keys(patch).length ? { slug: String(slug), patch } : null;
+    })
+    .filter(Boolean);
+}
+
+function normalizeForeshadowItems(items) {
+  if (!Array.isArray(items)) return items;
+  return items
+    .map((raw) => {
+      if (!raw || typeof raw !== 'object') return null;
+      const on_slug = raw.on_slug || raw.slug || raw.entity || raw.name;
+      const tag = raw.tag || raw.title || raw.name;
+      return on_slug && tag ? { ...raw, on_slug: String(on_slug), tag: String(tag) } : null;
+    })
+    .filter(Boolean);
+}
+
+function normalizeTimelineEvents(items) {
+  if (!Array.isArray(items)) return items;
+  return items
+    .map((raw) => {
+      if (typeof raw === 'string') return { event: raw };
+      if (!raw || typeof raw !== 'object') return null;
+      return { ...raw, event: raw.event || raw.title || raw.description || raw.content };
+    })
+    .filter((x) => x?.event);
+}
+
+function normalizeEntityTypeForTool(value) {
+  const s = String(value || '').trim().toLowerCase();
+  if (['character', 'item', 'faction'].includes(s)) return s;
+  if (/人物|角色|主角|配角|反派|protagonist|antagonist|person|npc|human/.test(s)) return 'character';
+  if (/物品|道具|法宝|武器|丹药|秘籍|item|artifact|weapon|treasure/.test(s)) return 'item';
+  if (/势力|门派|宗门|家族|组织|faction|sect|clan|guild|organization/.test(s)) return 'faction';
+  return 'character';
+}
+
+function normalizeConceptTypeForTool(value) {
+  const s = String(value || '').trim().toLowerCase();
+  if (['system', 'rule', 'concept'].includes(s)) return s;
+  if (/系统|体系|system/.test(s)) return 'system';
+  if (/规则|禁忌|法则|rule/.test(s)) return 'rule';
+  return 'concept';
+}
+
+function normalizeStringList(value) {
+  if (value == null || value === '') return undefined;
+  if (Array.isArray(value)) return value.map((x) => String(x || '').trim()).filter(Boolean);
+  return String(value).split(/[，,、;\n]/).map((x) => x.trim()).filter(Boolean);
+}
+
+function normalizeRelationships(value) {
+  if (value == null || value === '') return undefined;
+  const items = Array.isArray(value) ? value : String(value).split(/[，,、;\n]/);
+  return items
+    .map((x) => {
+      if (x && typeof x === 'object') return x.target ? x : null;
+      const target = String(x || '').trim();
+      return target ? { target } : null;
+    })
+    .filter(Boolean);
+}
+
 function classifyError(err, toolName, args) {
   const msg = String(err?.message || err);
   if (err?.kind) {
@@ -1827,7 +2092,7 @@ function classifyError(err, toolName, args) {
   if (/不允许写入路径/.test(msg)) {
     return {
       kind: 'path_not_in_whitelist',
-      hint: `工具 ${toolName} 不允许写此路径。常见对应：SOUL → setup_work；章节 → write_chapter；大纲 → write_outline；wiki 实体 → wiki_ingest；世界观/关系/进度 → update_progress（允许 progress/、memory/、style/、reviews/、relations/、exports/、knowledge/world/、knowledge/relationships.md）。`,
+      hint: `工具 ${toolName} 不允许写此路径。常见对应：SOUL → setup_work；章节 → write_chapter；大纲 → write_outline；wiki 实体/概念/地点 → wiki_ingest；世界观/关系/进度 → update_progress（允许 progress/、memory/、style/、reviews/、relations/、exports/、knowledge/world/、knowledge/relationships.md）。`,
     };
   }
   if (/未激活作品/.test(msg)) {
@@ -2234,7 +2499,7 @@ async function buildCharacterStatesMd(projectName, maxChars = 8) {
   }
 }
 
-function buildSystemPrompt({ projectName, soulContent, skillBlocks, skillShelfMd, projects, setupStage, tasksMd, memoriesMd, wikiPendingMd, wikiLintDueMd, foreshadowAlertsMd, volumeMilestonesMd, learnedRulesMd, styleFingerprintMd, characterStatesMd, recentFeedbackMd, intentInfo, policy, modeProfile }) {
+function buildSystemPrompt({ projectName, soulContent, skillBlocks, skillShelfMd, projects, setupStage, tasksMd, memoriesMd, wikiPendingMd, wikiLintDueMd, foreshadowAlertsMd, volumeMilestonesMd, learnedRulesMd, styleFingerprintMd, characterStatesMd, recentFeedbackMd, intentInfo, policy, modeProfile, structuredContextMd }) {
   // 顺序按"稳定 → 易变"排，方便 LLM 提供商做 prompt cache 前缀命中：
   // 1) BASE_SYSTEM           永远不变
   // 2) skill_inline_references 同一意图同一会话基本不变
@@ -2258,6 +2523,10 @@ function buildSystemPrompt({ projectName, soulContent, skillBlocks, skillShelfMd
     parts.push(`\n<work_instructions>\n${soulContent.trim()}\n</work_instructions>`);
   } else if (policy?.includeSoul && projectName) {
     parts.push(`\n<work_instructions>\n（SOUL.md 不存在 —— 请先调用 work-setup 流程引导用户立项）\n</work_instructions>`);
+  }
+
+  if (structuredContextMd) {
+    parts.push(`\n<structured_context>\n${structuredContextMd}\n</structured_context>`);
   }
 
   const projectListLine = policy?.includeProjects
@@ -2888,6 +3157,7 @@ async function executeToolCall({ tc, ctx, emit, messages, deferToolMessages = fa
   };
   let parsed = {};
   try { parsed = JSON.parse(tc.function.arguments || '{}'); } catch {}
+  parsed = normalizeToolArgs(tc.function.name, parsed);
   emit({ type: 'tool_call', name: tc.function.name, args: parsed, id: tc.id });
 
   const failKey = `${tc.function.name}|${argHash(parsed)}`;
@@ -2983,18 +3253,15 @@ async function executeToolCall({ tc, ctx, emit, messages, deferToolMessages = fa
         const fixEnv = wrapToolResult(fixResult);
         emit({ type: 'tool_result', name: repair.injectToolCall.name, id: `${tc.id}:repair`, ok: isOk(fixEnv), status: fixEnv.status, result: fixEnv });
         const cls = classifyError(err, tc.function.name, parsed);
-        result = wrapToolError({
+        result = wrapToolRecovered({
           err,
           kindHint: cls.kind,
           hintText: '前置条件已自动补齐，请用相同参数重新调用本工具。',
-          attempt: priorFails + 1,
-          maxRepeat: MAX_REPEAT_FAILS,
-          autoRepaired: true,
           via: repair.injectToolCall.name,
           note: repair.note,
           recoveryHint: cls,
         });
-        emit({ type: 'tool_result', name: tc.function.name, id: tc.id, ok: false, status: 'error', result });
+        emit({ type: 'tool_result', name: tc.function.name, id: tc.id, status: 'recovered', result });
         pushToolMessage({ role: 'tool', tool_call_id: tc.id, content: JSON.stringify(result) });
         repaired = true;
       }
@@ -3012,18 +3279,15 @@ async function executeToolCall({ tc, ctx, emit, messages, deferToolMessages = fa
         noteToolSuccess(recovery.injectToolCall.name, fixArgs, fixResult, ctx);
         const fixEnv = wrapToolResult(fixResult);
         emit({ type: 'tool_result', name: recovery.injectToolCall.name, id: `${tc.id}:policy`, ok: isOk(fixEnv), status: fixEnv.status, result: fixEnv });
-        result = wrapToolError({
+        result = wrapToolRecovered({
           err,
           kindHint: cls.kind,
           hintText: '恢复策略已自动补齐一个前置动作，请根据结果重试原工具或调整参数。',
-          attempt: priorFails + 1,
-          maxRepeat: MAX_REPEAT_FAILS,
-          autoRepaired: true,
           via: recovery.injectToolCall.name,
           note: recovery.note,
           recoveryHint: cls,
         });
-        emit({ type: 'tool_result', name: tc.function.name, id: tc.id, ok: false, status: 'error', result });
+        emit({ type: 'tool_result', name: tc.function.name, id: tc.id, status: 'recovered', result });
         pushToolMessage({ role: 'tool', tool_call_id: tc.id, content: JSON.stringify(result) });
         return { ok: false, parsed, toolMessages };
       }
@@ -3115,6 +3379,9 @@ function detectRequiredWrite(userMessage, intentInfo) {
   // 4) 文本兜底（intent 漏判时）
   if (/((写|出|生成|落盘|保存|现在写|帮我写|给我写).*(总纲|总大纲|全书大纲|整体大纲))|outline\/overall\.md/i.test(text)) {
     return { tool: 'write_outline', path: 'outline/overall.md', label: '总纲' };
+  }
+  if (/(立项|作品宪章|SOUL\.md|setup[-_ ]?pipeline|work[-_ ]?setup)/i.test(text)) {
+    return { tool: 'setup_work', path: null, label: '作品立项 (SOUL.md)' };
   }
   const m1 = /第\s*(\d+)\s*章/.exec(text);
   const cnMap = { 一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9, 十: 10 };
@@ -3346,6 +3613,28 @@ export async function runAgent({ userMessage, projectName, history, emit, signal
     volumeMilestonesMd = vm;
   }
 
+  const structuredContext = await buildStructuredContext({
+    projectName,
+    soulContent,
+    setupStage,
+    intentInfo,
+    tasksMd,
+    memoriesMd,
+    wikiPendingMd,
+    wikiLintDueMd,
+    foreshadowAlertsMd,
+    volumeMilestonesMd,
+    learnedRulesMd,
+    styleFingerprintMd,
+    characterStatesMd,
+    recentFeedbackMd,
+    skillShelfMd,
+    skillBlocks,
+    projects,
+    modeProfile,
+  });
+  const structuredContextMd = renderStructuredContextMarkdown(structuredContext);
+
   // 2. 装配消息（必要时压缩 history 防爆 prompt）
   const sysFirst = buildSystemPrompt({
     projectName,
@@ -3367,6 +3656,7 @@ export async function runAgent({ userMessage, projectName, history, emit, signal
     intentInfo,
     policy,
     modeProfile,
+    structuredContextMd,
   });
   const sumChars = (arr) => arr.reduce((n, m) => n + (typeof m.content === 'string' ? m.content.length : 0), 0);
   let workingHistory = history || [];
@@ -3430,6 +3720,9 @@ export async function runAgent({ userMessage, projectName, history, emit, signal
   const resumeDirective = restoredAgentState && shouldOfferAgentResume(restoredAgentState, userMessage)
     ? `\n\n${renderResumeHint(restoredAgentState)}`
     : '';
+  const plan = buildExecutionPlan({ userMessage, intentInfo, requiredWrites: requiredWriteList, setupStage });
+  emit({ type: 'execution_plan', plan, markdown: renderExecutionPlanMarkdown(plan) });
+
   const systemPrompt = sysFirst + writeDirective + multiWriteDirective + resumeDirective;
   const messages = [
     { role: 'system', content: systemPrompt },
@@ -3437,7 +3730,7 @@ export async function runAgent({ userMessage, projectName, history, emit, signal
     { role: 'user', content: userMessage },
   ];
 
-  // 3. ReAct 循环
+  // 3. 执行层状态
   const ctx = {
     projectName,           // 可变：create_project / switch_project 会更新它
     userMessage,
@@ -3451,7 +3744,10 @@ export async function runAgent({ userMessage, projectName, history, emit, signal
     lastTasks: null,       // plan_tasks 调用后会更新（{id,title,status}[]）
     taskRuntime: null,
     autoNudges: 0,         // 已用过的"未完成任务自动续轮"次数（最多 2）
+    thoughtOnlyNudges: 0,  // 模型只输出 reasoning、没有任何 tool/content 时的自动续轮次数
     intentInfo,
+    executionPlan: plan,
+    structuredContext,
     overallVolumePlans,
     requiredWrites: requiredWriteList,
     requiredWrite: requiredWriteList.find((x) => !x.done) || null,
@@ -3476,6 +3772,7 @@ export async function runAgent({ userMessage, projectName, history, emit, signal
       chapterCritic: new Map(),
       fullReadChapters: new Set(),
       lastAcceptance: null,
+      lastJudgment: null,
       skillRuntime: createRuntimeToolState(),
     },
     toolCache: new Map(),
@@ -3519,7 +3816,7 @@ export async function runAgent({ userMessage, projectName, history, emit, signal
       }
       ({ content, reasoning, tool_calls, usage, config } = await streamChat({
         messages,
-        tools: TOOLS,
+        tools: activeToolsForContext(ctx),
         signal,
         profile: activeProfile,
         toolChoice: ctx.forceNextTool
@@ -3539,6 +3836,9 @@ export async function runAgent({ userMessage, projectName, history, emit, signal
       }
       throw e;
     }
+    content = content || '';
+    reasoning = reasoning || '';
+    tool_calls = Array.isArray(tool_calls) ? tool_calls : [];
     emit({
       type: 'llm_done',
       turn,
@@ -3581,7 +3881,7 @@ export async function runAgent({ userMessage, projectName, history, emit, signal
     // 把本轮 assistant 消息追加（含 tool_calls）
     messages.push({
       role: 'assistant',
-      content: content || null,
+      content,
       ...(tool_calls.length ? { tool_calls } : {}),
     });
 
@@ -3626,6 +3926,26 @@ export async function runAgent({ userMessage, projectName, history, emit, signal
         messages.push({
           role: 'user',
           content: `[系统提醒｜非用户消息] 你刚才只输出了文字没调任何工具，但任务清单里还有 ${pending.length} 个未完成项：\n${list}\n\n请按以下规则继续：\n1) 接着推进 in_progress 那一项；如果它已可标 done，调 plan_tasks 更新状态再做下一项。\n2) 真的需要用户决策才能推进 → 调 ask_user（不要只用文字提问）。\n3) 已全部完成 → 调一次 plan_tasks 把所有项标 done，再交付总结。\n4) 用户给过的设定（人物/世界观/红线）以原话为准，不得擅自改写。`,
+        });
+        continue;
+      }
+      const contentLen = String(content || '').trim().length;
+      const reasoningLen = String(reasoning || '').trim().length;
+      if (contentLen === 0 && reasoningLen > 0 && ctx.thoughtOnlyNudges < 2 && turn < maxTurns) {
+        ctx.thoughtOnlyNudges += 1;
+        const lowerReasoning = String(reasoning || '').toLowerCase();
+        if (/read_skill_section|work-setup|setup/.test(lowerReasoning)) {
+          ctx.forceNextTool = 'read_skill_section';
+        }
+        emit({
+          type: 'auto_continue',
+          reason: 'reasoning_without_action',
+          nudge: ctx.thoughtOnlyNudges,
+          tool: ctx.forceNextTool || null,
+        });
+        messages.push({
+          role: 'user',
+          content: `[系统提醒｜非用户消息] 你刚才只在 reasoning 里思考了下一步，没有输出正文，也没有调用任何工具，因此用户侧看起来像中断。\n现在必须继续执行：\n1. 如果你在 reasoning 中提到要读取 skill，请立即调用 read_skill_section。\n2. 如果信息不足，请调用 ask_user 提 1 个关键问题。\n3. 如果已经足够立项，请调用 setup_work 写入 SOUL.md。\n禁止继续只写"我需要/我应该/让我先"这类计划。`,
         });
         continue;
       }
@@ -3915,6 +4235,14 @@ export async function runAgent({ userMessage, projectName, history, emit, signal
       ctx.finalized = true;
       ctx.finalSummary = summary;
       emit({ type: 'final_summary', ...summary });
+      try {
+        const reflectionMd = buildReflectionMd({ plan: ctx.executionPlan, judgment: ctx.toolState?.lastJudgment || assessment, events: ctx.runEvents || [], ctx });
+        const relPath = await saveReflection(ctx.projectName, reflectionMd);
+        emit({ type: 'file_write', path: `novels/${ctx.projectName}/${relPath}`, kind: 'reflection', note: '任务反思' });
+        emit({ type: 'reflection_saved', path: relPath, reason: assessment.status });
+      } catch (e) {
+        emit({ type: 'error', message: `reflection 保存失败：${String(e?.message || e)}` });
+      }
     }
   }
   emit({ type: 'done' });
